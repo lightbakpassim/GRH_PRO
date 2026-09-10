@@ -16,4 +16,9 @@ public class UtilisateurResponse {
     private Utilisateur.Role role;
     private Integer idEmploye;
     private String nomCompletEmploye;
+
+    /** Renseigné uniquement à la création. */
+    private Boolean emailEnvoye;
+    private String motDePasseTemporaire;
+    private String avertissement;
 }

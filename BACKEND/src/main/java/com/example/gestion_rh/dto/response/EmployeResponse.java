@@ -23,4 +23,9 @@ public class EmployeResponse {
     private Employe.StatutEmploye statutEmploye;
     private Integer idDepartement;
     private String nomDepartement;
+    /** Présents uniquement à la création. */
+    private Boolean compteCree;
+    private Boolean emailEnvoye;
+    private String motDePasseTemporaire;
+    private String avertissement;
 }

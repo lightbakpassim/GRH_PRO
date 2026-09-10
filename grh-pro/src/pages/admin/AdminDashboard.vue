@@ -1,22 +1,24 @@
 <template>
   <div class="space-y-6">
-    <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">Tableau de bord</h1>
-        <p class="text-gray-500 mt-1">Juin 2026</p>
+        <p class="text-gray-500 mt-1">
+          Vue d'ensemble RH
+          <span v-if="entreprise?.genereA" class="text-xs text-emerald-600 ml-2">MAJ {{ entreprise.genereA }}</span>
+        </p>
       </div>
       <button
+          type="button"
           @click="refreshData"
-          class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md font-medium transition-all duration-200 hover:bg-gray-300 active:scale-95"
+          class="w-full sm:w-auto bg-gray-200 text-gray-700 px-4 py-2.5 min-h-11 rounded-md font-medium hover:bg-gray-300 inline-flex items-center justify-center gap-1"
       >
-        <ArrowPathIcon class="w-4 h-4 inline mr-1" />
+        <ArrowPathIcon class="w-4 h-4" />
         Actualiser
       </button>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       <StatCard
           title="Total employés"
           :value="stats.totalEmployes"
@@ -31,7 +33,6 @@
           :icon="ClockIcon"
           icon-bg="orange"
           subtitle="En attente de validation"
-          @click="scrollToHeuresSupp"
       />
       <StatCard
           title="Congés à traiter"
@@ -39,41 +40,76 @@
           :icon="CalendarIcon"
           icon-bg="blue"
           subtitle="Demandes en attente"
-          @click="scrollToConges"
       />
       <StatCard
-          title="Paiement juin"
+          title="Paiements mois"
           :value="stats.paiementMois"
           :icon="CreditCardIcon"
           icon-bg="green"
-          subtitle="Paiements effectués"
+          subtitle="Effectués / validés"
       />
     </div>
 
-    <!-- Heures supplémentaires en attente -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <!-- Graphiques -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
+        <h2 class="text-sm font-semibold text-gray-800 mb-1">Effectifs</h2>
+        <p class="text-xs text-gray-400 mb-3">Actifs vs inactifs</p>
+        <DonutChart
+            :labels="['Actifs', 'Inactifs']"
+            :values="[entreprise?.employesActifs || 0, entreprise?.employesInactifs || 0]"
+            :colors="['#1a7a7a', '#94a3b8']"
+            :height="240"
+        />
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
+        <h2 class="text-sm font-semibold text-gray-800 mb-1">Paiements du mois</h2>
+        <p class="text-xs text-gray-400 mb-3">Répartition des statuts</p>
+        <DonutChart
+            :labels="['En attente', 'Effectués', 'Validés']"
+            :values="paiementDonutValues"
+            :colors="['#f5a623', '#1a7a7a', '#4caf7d']"
+            :height="240"
+        />
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 lg:col-span-1">
+        <h2 class="text-sm font-semibold text-gray-800 mb-1">Par département</h2>
+        <p class="text-xs text-gray-400 mb-3">Employés actifs</p>
+        <DonutChart
+            :labels="deptLabels"
+            :values="deptValues"
+            :height="240"
+        />
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
+      <h2 class="text-sm font-semibold text-gray-800 mb-1">Activité des 7 derniers jours</h2>
+      <p class="text-xs text-gray-400 mb-3">Pointages et heures supplémentaires</p>
+      <LineChart
+          :labels="serieLabels"
+          :datasets="serieDatasets"
+          y-title="Quantité"
+          :height="280"
+      />
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
       <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
         <ClockIcon class="w-5 h-5 text-orange-500" />
         Heures supplémentaires - En attente
       </h2>
-      <DataTable
-          :columns="heuresSuppColumns"
-          :data="heuresSuppAttente"
-          :actions="heuresSuppActions"
-      />
+      <DataTable :columns="heuresSuppColumns" :data="heuresSuppAttente" :actions="heuresSuppActions" />
     </div>
 
-    <!-- Demandes de congé en attente -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
       <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
         <CalendarIcon class="w-5 h-5 text-blue-500" />
         Demandes de congé - En attente
       </h2>
-      <DataTable
-          :columns="congesColumns"
-          :data="congesAttente"
-          :actions="congesActions"
-      />
+      <DataTable :columns="congesColumns" :data="congesAttente" :actions="congesActions" />
     </div>
   </div>
 </template>
@@ -81,125 +117,151 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useDataStore } from '@/stores/dataStore'
+import { pointagesAPI } from '@/API/pointages'
+import { congesAPI } from '@/API/conges'
+import { dashboardAPI } from '@/API/dashboard'
+import { mapPointage, mapConge } from '@/utils/mappers'
+import { unwrapList } from '@/utils/api'
 import { useToast } from '@/composable/useToast'
 import StatCard from '@/components/StatCard.vue'
 import DataTable from '@/components/DataTable.vue'
+import DonutChart from '@/components/charts/DonutChart.vue'
+import LineChart from '@/components/charts/LineChart.vue'
 import {
-  UsersIcon,
-  ClockIcon,
-  CalendarIcon,
-  CreditCardIcon,
-  ArrowPathIcon,
-  CheckIcon,
-  XMarkIcon
+  UsersIcon, ClockIcon, CalendarIcon, CreditCardIcon,
+  ArrowPathIcon, CheckIcon, XMarkIcon
 } from '@heroicons/vue/24/outline'
-import dayjs from 'dayjs'
 
 const router = useRouter()
-const dataStore = useDataStore()
 const { success, error } = useToast()
 
-const stats = ref({
-  totalEmployes: 0,
-  heuresSupp: 0,
-  congesAttente: 0,
-  paiementMois: 0
-})
+const entreprise = ref(null)
+const stats = ref({ totalEmployes: 0, heuresSupp: 0, congesAttente: 0, paiementMois: 0 })
+const heuresSuppAttente = ref([])
+const congesAttente = ref([])
 
 const heuresSuppColumns = [
   { key: 'employeNom', label: 'Employé' },
   { key: 'date', label: 'Date', type: 'date' },
-  { key: 'heuresTrav', label: 'H. STD' },
+  { key: 'heuresTrav', label: 'H. STD', hideOnMobile: true },
   { key: 'heuresSupp', label: 'H. SUPP' }
 ]
 
 const congesColumns = [
   { key: 'employeNom', label: 'Employé' },
-  { key: 'dateDebut', label: 'Début', type: 'date' },
-  { key: 'dateFin', label: 'Fin', type: 'date' },
+  { key: 'dateDebut', label: 'Début', type: 'date', hideOnMobile: true },
+  { key: 'dateFin', label: 'Fin', type: 'date', hideOnMobile: true },
   { key: 'nbJours', label: 'Jours' },
-  { key: 'motif', label: 'Motif' }
+  { key: 'motif', label: 'Motif', hideOnMobile: true }
 ]
 
 const heuresSuppActions = [
-  {
-    label: 'Valider',
-    icon: CheckIcon,
-    buttonClass: 'text-green-600 hover:text-green-800',
-    onClick: (row) => validerPointage(row)
-  },
-  {
-    label: 'Refuser',
-    icon: XMarkIcon,
-    buttonClass: 'text-red-600 hover:text-red-800',
-    onClick: (row) => refuserPointage(row)
-  }
+  { label: 'Valider', icon: CheckIcon, buttonClass: 'text-green-600 hover:text-green-800', onClick: (row) => validerPointage(row) },
+  { label: 'Refuser', icon: XMarkIcon, buttonClass: 'text-red-600 hover:text-red-800', onClick: (row) => refuserPointage(row) }
 ]
 
 const congesActions = [
-  {
-    label: 'Valider',
-    icon: CheckIcon,
-    buttonClass: 'text-green-600 hover:text-green-800',
-    onClick: (row) => validerConge(row)
-  },
-  {
-    label: 'Refuser',
-    icon: XMarkIcon,
-    buttonClass: 'text-red-600 hover:text-red-800',
-    onClick: (row) => refuserConge(row)
-  }
+  { label: 'Valider', icon: CheckIcon, buttonClass: 'text-green-600 hover:text-green-800', onClick: (row) => validerConge(row) },
+  { label: 'Refuser', icon: XMarkIcon, buttonClass: 'text-red-600 hover:text-red-800', onClick: (row) => refuserConge(row) }
 ]
 
-const heuresSuppAttente = computed(() =>
-    dataStore.pointages.filter(p => p.statut === 'En attente')
-)
-
-const congesAttente = computed(() =>
-    dataStore.conges.filter(c => c.statut === 'En attente')
-)
-
-const refreshData = () => {
-  stats.value = dataStore.getAdminStats()
-  success('Données actualisées')
-}
-
-const goToEmployes = () => {
-  router.push('/admin/employes')
-}
-
-const scrollToHeuresSupp = () => {
-  const element = document.querySelector('.bg-white:has(.text-orange-500)')
-  if (element) element.scrollIntoView({ behavior: 'smooth' })
-}
-
-const scrollToConges = () => {
-  const elements = document.querySelectorAll('.bg-white')
-  if (elements[2]) elements[2].scrollIntoView({ behavior: 'smooth' })
-}
-
-const validerPointage = (row) => {
-  dataStore.validerPointage(row.id)
-  success(`Pointage de ${row.employeNom} validé`)
-}
-
-const refuserPointage = (row) => {
-  dataStore.refuserPointage(row.id)
-  error(`Pointage de ${row.employeNom} refusé`)
-}
-
-const validerConge = (row) => {
-  dataStore.validerConge(row.id)
-  success(`Congé de ${row.employeNom} validé`)
-}
-
-const refuserConge = (row) => {
-  dataStore.refuserConge(row.id)
-  error(`Congé de ${row.employeNom} refusé`)
-}
-
-onMounted(() => {
-  stats.value = dataStore.getAdminStats()
+const paiementDonutValues = computed(() => {
+  const d = entreprise.value || {}
+  const effectues = Math.max(0, (d.paiementsMoisEnCours || 0) - (d.paiementsValides || 0))
+  return [d.paiementsEnAttente || 0, effectues, d.paiementsValides || 0]
 })
+
+const deptLabels = computed(() =>
+  (entreprise.value?.parDepartement || []).map(d => d.nomDepartement)
+)
+const deptValues = computed(() =>
+  (entreprise.value?.parDepartement || []).map(d => d.effectif)
+)
+
+const serieLabels = computed(() =>
+  (entreprise.value?.pointages7j || []).map(p => p.label)
+)
+const serieDatasets = computed(() => [
+  {
+    label: 'Pointages',
+    data: (entreprise.value?.pointages7j || []).map(p => p.valeur),
+    color: '#1a7a7a'
+  },
+  {
+    label: 'Heures supp.',
+    data: (entreprise.value?.heuresSupp7j || []).map(p => p.valeur),
+    color: '#f5a623'
+  }
+])
+
+const refreshData = async (showToast = true) => {
+  try {
+    const [dashRes, suiviRes, congeRes] = await Promise.all([
+      dashboardAPI.getEntreprise(),
+      pointagesAPI.getEnAttente(),
+      congesAPI.getEnAttente()
+    ])
+
+    entreprise.value = dashRes.data
+    const suivis = unwrapList(suiviRes.data).map(mapPointage)
+    const conges = unwrapList(congeRes.data).map(mapConge)
+
+    heuresSuppAttente.value = suivis
+    congesAttente.value = conges
+
+    stats.value = {
+      totalEmployes: dashRes.data.employesActifs ?? 0,
+      heuresSupp: Number(suivis.reduce((s, p) => s + (p.heuresSupp || 0), 0).toFixed(1)),
+      congesAttente: conges.length,
+      paiementMois: dashRes.data.paiementsMoisEnCours ?? 0
+    }
+    if (showToast) success('Données actualisées')
+  } catch (err) {
+    error(err.response?.data?.message || 'Erreur chargement dashboard')
+  }
+}
+
+const goToEmployes = () => router.push('/admin/employes')
+
+const validerPointage = async (row) => {
+  try {
+    await pointagesAPI.validate(row.id)
+    success(`Pointage de ${row.employeNom} validé`)
+    await refreshData(false)
+  } catch (err) {
+    error(err.response?.data?.message || 'Erreur')
+  }
+}
+
+const refuserPointage = async (row) => {
+  try {
+    await pointagesAPI.reject(row.id)
+    error(`Pointage de ${row.employeNom} refusé`)
+    await refreshData(false)
+  } catch (err) {
+    error(err.response?.data?.message || 'Erreur')
+  }
+}
+
+const validerConge = async (row) => {
+  try {
+    await congesAPI.validate(row.id)
+    success(`Congé de ${row.employeNom} validé`)
+    await refreshData(false)
+  } catch (err) {
+    error(err.response?.data?.message || 'Erreur')
+  }
+}
+
+const refuserConge = async (row) => {
+  try {
+    await congesAPI.reject(row.id)
+    error(`Congé de ${row.employeNom} refusé`)
+    await refreshData(false)
+  } catch (err) {
+    error(err.response?.data?.message || 'Erreur')
+  }
+}
+
+onMounted(() => refreshData(false))
 </script>

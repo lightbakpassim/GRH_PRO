@@ -86,5 +86,5 @@ public class Utilisateur implements UserDetails {
     // Enums internes
     public enum StatutUtilisateur { Actif, Inactif }
 
-    public enum Role { Admin, Employe }
+    public enum Role { Admin, Employe, DG }
 }

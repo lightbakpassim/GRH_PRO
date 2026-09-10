@@ -25,4 +25,8 @@ public interface SuiviTempsRepository extends JpaRepository<SuiviTemps, Integer>
                                                @Param("annee") int annee);
 
     List<SuiviTemps> findByStatutSuppOrderByDateTravailDesc(SuiviTemps.StatutSupp statut);
+
+    List<SuiviTemps> findByDateTravail(LocalDate dateTravail);
+
+    List<SuiviTemps> findByDateTravailBetween(LocalDate debut, LocalDate fin);
 }

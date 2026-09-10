@@ -11,6 +11,7 @@ import com.example.gestion_rh.model.Notification;
 import com.example.gestion_rh.model.Utilisateur;
 import com.example.gestion_rh.repository.AbsenceRepository;
 import com.example.gestion_rh.repository.UtilisateurRepository;
+import com.example.gestion_rh.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,14 +43,16 @@ public class AbsenceService {
                 .stream().map(this::toResponse).toList();
     }
 
-    public AbsenceResponse findById(Integer id) {
-        return toResponse(getOrThrow(id));
+    public AbsenceResponse findById(Integer id, Utilisateur connecte) {
+        Absence absence = getOrThrow(id);
+        SecurityUtils.assertOwnsEmployeResource(connecte, absence.getEmploye().getIdEmploye());
+        return toResponse(absence);
     }
 
-    public AbsenceResponse create(AbsenceRequest request, String loginConnecte) {
-        Employe employe = employeService.getOrThrow(request.getIdEmploye());
-        Utilisateur utilisateur = utilisateurRepository.findByLogin(loginConnecte)
-                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
+    public AbsenceResponse create(AbsenceRequest request, Utilisateur connecte) {
+        Integer idEmploye = SecurityUtils.resolveTargetEmployeId(connecte, request.getIdEmploye());
+        Employe employe = employeService.getOrThrow(idEmploye);
+        Utilisateur utilisateur = utilisateurRepository.getReferenceById(connecte.getIdUtilisateur());
 
         Absence absence = Absence.builder()
                 .employe(employe)

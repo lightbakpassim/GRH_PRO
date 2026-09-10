@@ -63,7 +63,7 @@ public class DepartementService {
     }
 
     private DepartementResponse toResponse(Departement dept) {
-        long nbEmployes = dept.getEmployes() != null ? dept.getEmployes().size() : 0;
+        long nbEmployes = employeRepository.findByDepartement_IdDepartement(dept.getIdDepartement()).size();
         return DepartementResponse.builder()
                 .idDepartement(dept.getIdDepartement())
                 .nomDepartement(dept.getNomDepartement())

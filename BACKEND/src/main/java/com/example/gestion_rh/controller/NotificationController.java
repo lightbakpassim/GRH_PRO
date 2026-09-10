@@ -3,6 +3,8 @@ package com.example.gestion_rh.controller;
 
 import com.example.gestion_rh.dto.request.NotificationRequest;
 import com.example.gestion_rh.dto.response.NotificationResponse;
+import com.example.gestion_rh.model.Utilisateur;
+import com.example.gestion_rh.security.SecurityUtils;
 import com.example.gestion_rh.service.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,49 +25,33 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
-    /**
-     * GET /api/notifications/mes-notifications
-     * L'utilisateur connecté récupère toutes ses notifications (triées par date desc)
-     */
     @GetMapping("/mes-notifications")
-    @PreAuthorize("hasAnyRole('Admin','Employé')")
+    @PreAuthorize("hasAnyRole('Admin','Employe')")
     public ResponseEntity<List<NotificationResponse>> mesNotifications(
             @AuthenticationPrincipal UserDetails userDetails) {
-        com.example.gestion_rh.model.Utilisateur u = (com.example.gestion_rh.model.Utilisateur) userDetails;
+        Utilisateur u = (Utilisateur) userDetails;
         return ResponseEntity.ok(
-                notificationService.findByEmploye(u.getEmploye().getIdEmploye()));
+                notificationService.findByEmploye(SecurityUtils.requireIdEmploye(u)));
     }
 
-    /**
-     * GET /api/notifications/mes-notifications/non-lues
-     * Récupère uniquement les notifications non lues de l'utilisateur connecté
-     */
     @GetMapping("/mes-notifications/non-lues")
-    @PreAuthorize("hasAnyRole('Admin','Employé')")
+    @PreAuthorize("hasAnyRole('Admin','Employe')")
     public ResponseEntity<List<NotificationResponse>> mesNotificationsNonLues(
             @AuthenticationPrincipal UserDetails userDetails) {
-        com.example.gestion_rh.model.Utilisateur u = (com.example.gestion_rh.model.Utilisateur) userDetails;
+        Utilisateur u = (Utilisateur) userDetails;
         return ResponseEntity.ok(
-                notificationService.findNonLuesByEmploye(u.getEmploye().getIdEmploye()));
+                notificationService.findNonLuesByEmploye(SecurityUtils.requireIdEmploye(u)));
     }
 
-    /**
-     * GET /api/notifications/mes-notifications/count
-     * Retourne le nombre de notifications non lues (utile pour le badge dans le frontend)
-     */
     @GetMapping("/mes-notifications/count")
-    @PreAuthorize("hasAnyRole('Admin','Employé')")
+    @PreAuthorize("hasAnyRole('Admin','Employe')")
     public ResponseEntity<Map<String, Long>> countNonLues(
             @AuthenticationPrincipal UserDetails userDetails) {
-        com.example.gestion_rh.model.Utilisateur u = (com.example.gestion_rh.model.Utilisateur) userDetails;
-        long count = notificationService.countNonLues(u.getEmploye().getIdEmploye());
+        Utilisateur u = (Utilisateur) userDetails;
+        long count = notificationService.countNonLues(SecurityUtils.requireIdEmploye(u));
         return ResponseEntity.ok(Map.of("nonLues", count));
     }
 
-    /**
-     * POST /api/notifications
-     * Crée manuellement une notification (Admin uniquement)
-     */
     @PostMapping
     @PreAuthorize("hasRole('Admin')")
     public ResponseEntity<NotificationResponse> create(
@@ -74,34 +60,24 @@ public class NotificationController {
                 .body(notificationService.create(request));
     }
 
-    /**
-     * PATCH /api/notifications/{id}/lire
-     * Marque une notification spécifique comme lue
-     */
     @PatchMapping("/{id}/lire")
-    @PreAuthorize("hasAnyRole('Admin','Employé')")
-    public ResponseEntity<Map<String, Integer>> marquerCommeLue(@PathVariable Integer id) {
-        int updated = notificationService.marquerCommeLue(id);
+    @PreAuthorize("hasAnyRole('Admin','Employe')")
+    public ResponseEntity<Map<String, Integer>> marquerCommeLue(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        int updated = notificationService.marquerCommeLue(id, (Utilisateur) userDetails);
         return ResponseEntity.ok(Map.of("updated", updated));
     }
 
-    /**
-     * PATCH /api/notifications/lire-tout
-     * Marque toutes les notifications de l'utilisateur connecté comme lues
-     */
     @PatchMapping("/lire-tout")
-    @PreAuthorize("hasAnyRole('Admin','Employé')")
+    @PreAuthorize("hasAnyRole('Admin','Employe')")
     public ResponseEntity<Map<String, Integer>> marquerToutesCommeLues(
             @AuthenticationPrincipal UserDetails userDetails) {
-        com.example.gestion_rh.model.Utilisateur u = (com.example.gestion_rh.model.Utilisateur) userDetails;
-        int updated = notificationService.marquerToutesCommeLues(u.getEmploye().getIdEmploye());
+        Utilisateur u = (Utilisateur) userDetails;
+        int updated = notificationService.marquerToutesCommeLues(SecurityUtils.requireIdEmploye(u));
         return ResponseEntity.ok(Map.of("updated", updated));
     }
 
-    /**
-     * DELETE /api/notifications/{id}
-     * Supprime une notification (Admin)
-     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('Admin')")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {

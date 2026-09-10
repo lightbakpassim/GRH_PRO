@@ -1,125 +1,130 @@
 <template>
-  <div class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-    <div class="max-w-6xl w-full">
-      <div class="grid lg:grid-cols-2 gap-8 items-center">
-        <!-- Left side - Hero -->
-        <div class="hidden lg:block">
-          <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-2xl mb-6">
-              <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-              </svg>
-            </div>
-            <h1 class="text-3xl font-bold text-gray-800 mb-4">GRH Pro</h1>
-            <p class="text-gray-600">Gérez vos ressources humaines efficacement</p>
-            <p class="text-gray-500 text-sm mt-4">Pointages, congés, paiement et notifications tout en un seul endroit</p>
+  <div class="min-h-screen flex bg-slate-950">
+    <!-- Panneau marque -->
+    <div class="hidden lg:flex lg:w-[46%] relative overflow-hidden flex-col justify-between p-12 text-white">
+      <div
+          class="absolute inset-0 bg-gradient-to-br from-teal-900 via-teal-800 to-slate-900"
+          aria-hidden="true"
+      />
+      <div
+          class="absolute inset-0 opacity-30"
+          style="background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,.18), transparent 45%), radial-gradient(circle at 80% 70%, rgba(45,212,191,.25), transparent 40%);"
+          aria-hidden="true"
+      />
 
-            <div class="grid grid-cols-3 gap-4 mt-8 pt-4 border-t border-gray-100">
-              <div>
-                <div class="text-2xl font-bold text-primary-600">24</div>
-                <div class="text-xs text-gray-500">Employés</div>
-              </div>
-              <div>
-                <div class="text-2xl font-bold text-primary-600">8</div>
-                <div class="text-xs text-gray-500">Modules</div>
-              </div>
-              <div>
-                <div class="text-2xl font-bold text-primary-600">100%</div>
-                <div class="text-xs text-gray-500">Sécurisé</div>
-              </div>
-            </div>
-          </div>
+      <div class="relative z-10">
+        <AppLogo
+            size="lg"
+            wordmark-class="text-white text-2xl"
+            accent-class="text-teal-300"
+        />
+      </div>
+
+      <div class="relative z-10 max-w-md space-y-4">
+        <h1 class="text-4xl font-semibold leading-tight tracking-tight">
+          Gestion des ressources humaines, centralisée.
+        </h1>
+        <p class="text-teal-100/85 text-base leading-relaxed">
+          Pointages, congés, paiements et suivi — un espace sécurisé selon votre rôle.
+        </p>
+      </div>
+
+      <p class="relative z-10 text-sm text-teal-200/60">
+        Accès réservé aux collaborateurs autorisés
+      </p>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="flex-1 flex items-center justify-center p-6 sm:p-10 bg-slate-50">
+      <div class="w-full max-w-md">
+        <div class="lg:hidden mb-8 flex justify-center">
+          <AppLogo
+              size="lg"
+              wordmark-class="text-teal-800 text-2xl"
+              accent-class="text-teal-600"
+          />
         </div>
 
-        <!-- Right side - Login Form -->
-        <div class="bg-white rounded-xl shadow-lg p-8">
-          <div class="text-center mb-8">
-            <h2 class="text-2xl font-bold text-gray-800">Bienvenue</h2>
-            <p class="text-gray-500 mt-2">Connectez-vous à votre espace</p>
+        <div class="bg-white border border-slate-200/80 shadow-sm rounded-2xl p-8 sm:p-10">
+          <div class="mb-8">
+            <div class="hidden lg:flex justify-center mb-6">
+              <AppLogo
+                  size="xl"
+                  :show-wordmark="false"
+              />
+            </div>
+            <h2 class="text-2xl font-semibold text-slate-900 tracking-tight lg:text-center">Connexion</h2>
+            <p class="text-slate-500 mt-2 text-sm">
+              Saisissez votre email professionnel et votre mot de passe.
+            </p>
           </div>
 
-          <div class="flex gap-3 mb-6">
-            <button
-                v-for="role in roles"
-                :key="role.value"
-                @click="selectedRole = role.value"
-                :class="[
-                'flex-1 py-2 rounded-lg font-medium transition-all duration-200',
-                selectedRole === role.value
-                  ? 'bg-primary text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              ]"
-            >
-              {{ role.label }}
-            </button>
-          </div>
-
-          <form @submit.prevent="handleLogin" class="space-y-5">
+          <form @submit.prevent="handleLogin" class="space-y-5" novalidate>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Identifiants</label>
+              <label for="login-email" class="block text-sm font-medium text-slate-700 mb-1.5">
+                Email
+              </label>
               <input
+                  id="login-email"
                   v-model="form.email"
                   type="email"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-primary focus:border-transparent transition-all"
-                  :class="{ 'border-red-500': errors.email }"
-                  placeholder="exemple@grh.tg"
+                  autocomplete="username"
+                  class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-700/30 focus:border-teal-700 transition"
+                  :class="{ 'border-red-500 focus:ring-red-200 focus:border-red-500': errors.email }"
+                  placeholder="prenom.nom@entreprise.com"
                   required
               />
-              <p v-if="errors.email" class="text-xs text-red-500 mt-1">{{ errors.email }}</p>
+              <p v-if="errors.email" class="text-xs text-red-600 mt-1.5">{{ errors.email }}</p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+              <label for="login-password" class="block text-sm font-medium text-slate-700 mb-1.5">
+                Mot de passe
+              </label>
               <div class="relative">
                 <input
+                    id="login-password"
                     v-model="form.password"
                     :type="showPassword ? 'text' : 'password'"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    :class="{ 'border-red-500': errors.password }"
+                    autocomplete="current-password"
+                    class="w-full px-3.5 py-2.5 pr-11 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-700/30 focus:border-teal-700 transition"
+                    :class="{ 'border-red-500 focus:ring-red-200 focus:border-red-500': errors.password }"
                     placeholder="••••••••"
                     required
                 />
                 <button
                     type="button"
                     @click="showPassword = !showPassword"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
                 >
                   <EyeIcon v-if="!showPassword" class="w-5 h-5" />
                   <EyeSlashIcon v-else class="w-5 h-5" />
                 </button>
               </div>
-              <div class="flex justify-between mt-1">
-                <p v-if="errors.password" class="text-xs text-red-500">{{ errors.password }}</p>
-                <button type="button" class="text-xs text-blue-600 hover:text-blue-700 ml-auto">
-                  Mot de passe oublié ?
-                </button>
-              </div>
+              <p v-if="errors.password" class="text-xs text-red-600 mt-1.5">{{ errors.password }}</p>
             </div>
 
             <button
                 type="submit"
                 :disabled="loading"
-                class="w-full bg-primary text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:bg-primary-dark active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full mt-2 bg-teal-800 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-teal-900 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span v-if="!loading">Se Connecter</span>
-              <span v-else class="flex items-center justify-center gap-2">
-                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <span v-if="!loading">Se connecter</span>
+              <span v-else class="inline-flex items-center justify-center gap-2">
+                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                 </svg>
-                Connexion...
+                Connexion…
               </span>
             </button>
           </form>
-
-          <div class="mt-6 pt-6 border-t border-gray-200">
-            <p class="text-xs text-center text-gray-400">
-              Compte démo Admin: admin@grh.tg / admin123
-              <br />
-              Compte démo Employé: light@grh.tg / admin123
-            </p>
-          </div>
         </div>
+
+        <p class="mt-6 text-center text-xs text-slate-400">
+          L’espace (Admin, Employé ou DG) s’ouvre automatiquement selon votre compte.
+        </p>
       </div>
     </div>
   </div>
@@ -128,37 +133,36 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useDataStore} from '@/stores/dataStore.js'
 import { useAuthStore } from '@/stores/data.js'
 import { useToast } from '@/composable/useToast'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
+import AppLogo from '@/components/AppLogo.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const dataStore = useDataStore()
 const { success, error } = useToast()
 
-const roles = [
-  { label: 'Administrateur', value: 'Admin' },
-  { label: 'Employés', value: 'Employé' }
-]
-
-const selectedRole = ref('Admin')
 const showPassword = ref(false)
 const loading = ref(false)
 const errors = reactive({ email: '', password: '' })
 
 const form = reactive({
-  email: 'admin@grh.tg',
-  password: 'admin123'
+  email: '',
+  password: ''
 })
+
+const homeForRole = (role) => {
+  if (role === 'Admin') return '/admin'
+  if (role === 'DG') return '/dg'
+  return '/employe'
+}
 
 const handleLogin = async () => {
   errors.email = ''
   errors.password = ''
 
-  if (!form.email) {
-    errors.email = 'L\'email est requis'
+  if (!form.email?.trim()) {
+    errors.email = 'L’email est requis'
     return
   }
   if (!form.password) {
@@ -169,18 +173,19 @@ const handleLogin = async () => {
   loading.value = true
 
   try {
-    const result = await authStore.login(form.email, form.password)
+    const result = await authStore.login(form.email.trim(), form.password)
 
     if (result.success) {
-      success('Connexion réussie ! Bienvenue ' + result.user.name)
-      const redirectPath = result.user.role === 'Admin' ? '/admin' : '/employe'
-      router.push(redirectPath)
+      success('Connexion réussie. Bienvenue ' + result.user.name)
+      router.push(homeForRole(result.user.role))
     } else {
       error(result.message)
     }
   } catch (err) {
-    error('Erreur de connexion')
-    console.error(err)
+    const message = err.response?.data?.message
+      || err.response?.data?.error
+      || 'Email ou mot de passe incorrect'
+    error(message)
   } finally {
     loading.value = false
   }

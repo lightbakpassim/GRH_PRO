@@ -30,9 +30,9 @@ public class JwtAuthentificationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // Laisser passer les routes publiques sans traitement JWT
+        // Ne skipper le JWT que pour le login public
         final String requestPath = request.getServletPath();
-        if (requestPath.startsWith("/api/auth/")) {
+        if ("/api/auth/login".equals(requestPath)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -55,7 +55,7 @@ public class JwtAuthentificationFilter extends OncePerRequestFilter {
         }
 
         if (login != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            Utilisateur utilisateur = utilisateurRepository.findByLogin(login).orElse(null);
+            Utilisateur utilisateur = utilisateurRepository.findByLoginWithEmploye(login).orElse(null);
 
             if (utilisateur != null && jwtService.isTokenValid(jwt, utilisateur)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

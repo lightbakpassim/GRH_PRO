@@ -9,7 +9,7 @@ import java.time.LocalDate;
 @Data
 public class DemandeCongeRequest {
 
-    @NotNull(message = "L'id de l'employé est obligatoire")
+    /** Optionnel pour un Employe (forcé côté serveur). Obligatoire pour Admin. */
     private Integer idEmploye;
 
     @NotNull(message = "La date de début est obligatoire")

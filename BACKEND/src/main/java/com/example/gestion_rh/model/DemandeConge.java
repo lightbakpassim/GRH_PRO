@@ -41,7 +41,7 @@ public class DemandeConge {
     @Column(name = "nb_jours", nullable = false)
     private Integer nbJours;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = com.example.gestion_rh.model.converter.StatutCongeConverter.class)
     @Column(name = "statut_conge", nullable = false)
     private StatutConge statutConge;
 

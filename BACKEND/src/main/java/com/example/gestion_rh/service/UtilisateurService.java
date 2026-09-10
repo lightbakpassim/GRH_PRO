@@ -8,7 +8,9 @@ import com.example.gestion_rh.exception.ResourceNotFoundException;
 import com.example.gestion_rh.model.Employe;
 import com.example.gestion_rh.model.Utilisateur;
 import com.example.gestion_rh.repository.UtilisateurRepository;
+import com.example.gestion_rh.util.PasswordGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,11 +20,13 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class UtilisateurService {
 
     private final UtilisateurRepository utilisateurRepository;
     private final EmployeService employeService;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public List<UtilisateurResponse> findAll() {
         return utilisateurRepository.findAll().stream().map(this::toResponse).toList();
@@ -36,21 +40,58 @@ public class UtilisateurService {
         if (utilisateurRepository.existsByLogin(request.getLogin())) {
             throw new BusinessException("Ce login est déjà utilisé");
         }
-        if (utilisateurRepository.existsByEmploye_IdEmploye(request.getIdEmploye())) {
-            throw new BusinessException("Cet employé possède déjà un compte utilisateur");
+
+        Employe employe = null;
+        if (request.getRole() == Utilisateur.Role.DG) {
+            if (request.getIdEmploye() != null) {
+                throw new BusinessException("Un compte DG ne doit pas être lié à un employé");
+            }
+        } else {
+            if (request.getIdEmploye() == null) {
+                throw new BusinessException("L'id de l'employé est obligatoire pour ce rôle");
+            }
+            if (utilisateurRepository.existsByEmploye_IdEmploye(request.getIdEmploye())) {
+                throw new BusinessException("Cet employé possède déjà un compte utilisateur");
+            }
+            employe = employeService.getOrThrow(request.getIdEmploye());
         }
 
-        Employe employe = employeService.getOrThrow(request.getIdEmploye());
+        String motDePasseClair = (request.getMotDePasse() != null && !request.getMotDePasse().isBlank())
+                ? request.getMotDePasse()
+                : PasswordGenerator.generate(12);
+
+        String emailDest = resolveEmailDestinataire(request.getLogin(), employe);
+        String nomComplet = employe != null
+                ? employe.getPrenomEmploye() + " " + employe.getNomEmploye()
+                : request.getLogin();
 
         Utilisateur utilisateur = Utilisateur.builder()
                 .login(request.getLogin())
-                .motDePasse(passwordEncoder.encode(request.getMotDePasse()))
-                .statutUtilisateur(request.getStatutUtilisateur())
+                .motDePasse(passwordEncoder.encode(motDePasseClair))
+                .statutUtilisateur(request.getStatutUtilisateur() != null
+                        ? request.getStatutUtilisateur()
+                        : Utilisateur.StatutUtilisateur.Actif)
                 .role(request.getRole())
                 .employe(employe)
                 .build();
 
-        return toResponse(utilisateurRepository.save(utilisateur));
+        Utilisateur saved = utilisateurRepository.save(utilisateur);
+
+        boolean emailEnvoye = false;
+        String avertissementMail = null;
+        try {
+            emailService.envoyerIdentifiants(emailDest, nomComplet, saved.getLogin(), motDePasseClair);
+            emailEnvoye = true;
+        } catch (IllegalStateException e) {
+            avertissementMail = e.getMessage();
+            log.warn("Identifiants non envoyés pour {} : {}", saved.getLogin(), e.getMessage());
+        }
+
+        UtilisateurResponse response = toResponse(saved);
+        response.setEmailEnvoye(emailEnvoye);
+        response.setMotDePasseTemporaire(emailEnvoye ? null : motDePasseClair);
+        response.setAvertissement(avertissementMail);
+        return response;
     }
 
     public UtilisateurResponse update(Integer id, UtilisateurRequest request) {
@@ -62,7 +103,9 @@ public class UtilisateurService {
         }
 
         utilisateur.setLogin(request.getLogin());
-        utilisateur.setMotDePasse(passwordEncoder.encode(request.getMotDePasse()));
+        if (request.getMotDePasse() != null && !request.getMotDePasse().isBlank()) {
+            utilisateur.setMotDePasse(passwordEncoder.encode(request.getMotDePasse()));
+        }
         utilisateur.setStatutUtilisateur(request.getStatutUtilisateur());
         utilisateur.setRole(request.getRole());
 
@@ -81,6 +124,16 @@ public class UtilisateurService {
 
     public void delete(Integer id) {
         utilisateurRepository.delete(getOrThrow(id));
+    }
+
+    private String resolveEmailDestinataire(String login, Employe employe) {
+        if (employe != null && employe.getEmailEmploye() != null && employe.getEmailEmploye().contains("@")) {
+            return employe.getEmailEmploye();
+        }
+        if (login != null && login.contains("@")) {
+            return login;
+        }
+        throw new BusinessException("Impossible d'envoyer le mot de passe : aucun email valide (login ou employé)");
     }
 
     private Utilisateur getOrThrow(Integer id) {

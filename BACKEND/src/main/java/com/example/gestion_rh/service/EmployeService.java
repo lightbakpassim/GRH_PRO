@@ -1,15 +1,22 @@
 package com.example.gestion_rh.service;
 
-
 import com.example.gestion_rh.dto.request.EmployeRequest;
 import com.example.gestion_rh.dto.response.EmployeResponse;
+import com.example.gestion_rh.dto.response.PageResponse;
 import com.example.gestion_rh.exception.BusinessException;
 import com.example.gestion_rh.exception.ResourceNotFoundException;
 import com.example.gestion_rh.model.Departement;
 import com.example.gestion_rh.model.Employe;
+import com.example.gestion_rh.model.Utilisateur;
 import com.example.gestion_rh.repository.DepartementRepository;
 import com.example.gestion_rh.repository.EmployeRepository;
+import com.example.gestion_rh.repository.UtilisateurRepository;
+import com.example.gestion_rh.security.SecurityUtils;
+import com.example.gestion_rh.util.PasswordGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,10 +25,19 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class EmployeService {
 
     private final EmployeRepository employeRepository;
     private final DepartementRepository departementRepository;
+    private final UtilisateurRepository utilisateurRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+    private final HistoriqueActionService historiqueActionService;
+
+    public PageResponse<EmployeResponse> findAll(Pageable pageable) {
+        return PageResponse.from(employeRepository.findAll(pageable).map(this::toResponse));
+    }
 
     public List<EmployeResponse> findAll() {
         return employeRepository.findAll().stream().map(this::toResponse).toList();
@@ -42,9 +58,16 @@ public class EmployeService {
     }
 
     public EmployeResponse create(EmployeRequest request) {
+        if (request.getIdDepartement() == null) {
+            throw new BusinessException("Le département est obligatoire à la création");
+        }
         if (employeRepository.existsByEmailEmploye(request.getEmailEmploye())) {
             throw new BusinessException("Un employé avec cet email existe déjà");
         }
+        if (utilisateurRepository.existsByLogin(request.getEmailEmploye())) {
+            throw new BusinessException("Un compte utilisateur existe déjà pour cet email");
+        }
+
         Departement dept = departementRepository.findById(request.getIdDepartement())
                 .orElseThrow(() -> new ResourceNotFoundException("Département introuvable"));
 
@@ -58,18 +81,59 @@ public class EmployeService {
                 .dateEmbauche(request.getDateEmbauche())
                 .poste(request.getPoste())
                 .salaireBase(request.getSalaireBase())
-                .statutEmploye(request.getStatutEmploye())
+                .statutEmploye(request.getStatutEmploye() != null
+                        ? request.getStatutEmploye()
+                        : Employe.StatutEmploye.Actif)
                 .departement(dept)
                 .build();
 
-        return toResponse(employeRepository.save(employe));
+        employe = employeRepository.save(employe);
+
+        String motDePasseClair = PasswordGenerator.generate(12);
+        utilisateurRepository.save(Utilisateur.builder()
+                .login(request.getEmailEmploye())
+                .motDePasse(passwordEncoder.encode(motDePasseClair))
+                .role(Utilisateur.Role.Employe)
+                .statutUtilisateur(Utilisateur.StatutUtilisateur.Actif)
+                .employe(employe)
+                .build());
+
+        String nomComplet = employe.getPrenomEmploye() + " " + employe.getNomEmploye();
+        boolean emailEnvoye = false;
+        String avertissementMail = null;
+        try {
+            emailService.envoyerIdentifiants(
+                    employe.getEmailEmploye(),
+                    nomComplet,
+                    employe.getEmailEmploye(),
+                    motDePasseClair);
+            emailEnvoye = true;
+        } catch (IllegalStateException e) {
+            avertissementMail = e.getMessage();
+            log.warn("Identifiants non envoyés à {} : {}", employe.getEmailEmploye(), e.getMessage());
+        }
+
+        historiqueActionService.enregistrer(
+                "CREATION_EMPLOYE",
+                "Employé " + nomComplet + " (" + employe.getEmailEmploye()
+                        + ") — département " + dept.getNomDepartement()
+                        + (emailEnvoye ? " — email envoyé" : " — email non envoyé"),
+                safeActeur());
+
+        EmployeResponse response = toResponse(employe);
+        response.setCompteCree(true);
+        response.setEmailEnvoye(emailEnvoye);
+        // Si l'email n'est pas parti, l'admin doit transmettre le MDP manuellement
+        response.setMotDePasseTemporaire(emailEnvoye ? null : motDePasseClair);
+        response.setAvertissement(avertissementMail);
+        return response;
     }
 
     public EmployeResponse update(Integer id, EmployeRequest request) {
         Employe employe = getOrThrow(id);
+        String ancienEmail = employe.getEmailEmploye();
 
-        // Vérification email si changé
-        if (!employe.getEmailEmploye().equals(request.getEmailEmploye())
+        if (!ancienEmail.equals(request.getEmailEmploye())
                 && employeRepository.existsByEmailEmploye(request.getEmailEmploye())) {
             throw new BusinessException("Cet email est déjà utilisé par un autre employé");
         }
@@ -89,11 +153,99 @@ public class EmployeService {
         employe.setStatutEmploye(request.getStatutEmploye());
         employe.setDepartement(dept);
 
-        return toResponse(employeRepository.save(employe));
+        Employe saved = employeRepository.save(employe);
+
+        // Garder le login aligné sur l'email professionnel
+        if (!ancienEmail.equals(request.getEmailEmploye())) {
+            utilisateurRepository.findByLogin(ancienEmail).ifPresent(u -> {
+                if (utilisateurRepository.existsByLogin(request.getEmailEmploye())) {
+                    throw new BusinessException("Impossible de synchroniser le login : email déjà pris");
+                }
+                u.setLogin(request.getEmailEmploye());
+                utilisateurRepository.save(u);
+            });
+        }
+
+        return toResponse(saved);
+    }
+
+    /** Régénère un MDP unique, tente l'email, sinon le renvoie à l'admin. */
+    public EmployeResponse regenererIdentifiants(Integer id) {
+        Employe employe = getOrThrow(id);
+        Utilisateur utilisateur = utilisateurRepository.findByEmploye_IdEmploye(employe.getIdEmploye())
+                .or(() -> utilisateurRepository.findByLogin(employe.getEmailEmploye()))
+                .orElseThrow(() -> new BusinessException("Aucun compte utilisateur pour cet employé"));
+
+        String motDePasseClair = PasswordGenerator.generate(12);
+        utilisateur.setMotDePasse(passwordEncoder.encode(motDePasseClair));
+        if (!employe.getEmailEmploye().equals(utilisateur.getLogin())) {
+            if (utilisateurRepository.existsByLogin(employe.getEmailEmploye())
+                    && !utilisateur.getLogin().equals(employe.getEmailEmploye())) {
+                throw new BusinessException("Impossible d'aligner le login sur l'email : déjà utilisé");
+            }
+            utilisateur.setLogin(employe.getEmailEmploye());
+        }
+        utilisateur.setStatutUtilisateur(Utilisateur.StatutUtilisateur.Actif);
+        utilisateurRepository.save(utilisateur);
+
+        String nomComplet = employe.getPrenomEmploye() + " " + employe.getNomEmploye();
+        boolean emailEnvoye = false;
+        String avertissementMail = null;
+        try {
+            emailService.envoyerIdentifiants(
+                    employe.getEmailEmploye(),
+                    nomComplet,
+                    utilisateur.getLogin(),
+                    motDePasseClair);
+            emailEnvoye = true;
+        } catch (IllegalStateException e) {
+            avertissementMail = e.getMessage();
+            log.warn("Renvoi identifiants échoué pour {} : {}", employe.getEmailEmploye(), e.getMessage());
+        }
+
+        historiqueActionService.enregistrer(
+                "RESET_MDP_EMPLOYE",
+                "Identifiants régénérés pour " + employe.getEmailEmploye()
+                        + (emailEnvoye ? " — email envoyé" : " — email non envoyé"),
+                safeActeur());
+
+        EmployeResponse response = toResponse(employe);
+        response.setCompteCree(true);
+        response.setEmailEnvoye(emailEnvoye);
+        response.setMotDePasseTemporaire(emailEnvoye ? null : motDePasseClair);
+        response.setAvertissement(avertissementMail);
+        return response;
+    }
+
+    /** Désactivation logique (évite les FK en DELETE dur). */
+    public EmployeResponse desactiver(Integer id) {
+        Employe employe = getOrThrow(id);
+        employe.setStatutEmploye(Employe.StatutEmploye.Inactif);
+        employeRepository.save(employe);
+        utilisateurRepository.findByEmploye_IdEmploye(employe.getIdEmploye()).ifPresentOrElse(u -> {
+            u.setStatutUtilisateur(Utilisateur.StatutUtilisateur.Inactif);
+            utilisateurRepository.save(u);
+        }, () -> utilisateurRepository.findByLogin(employe.getEmailEmploye()).ifPresent(u -> {
+            u.setStatutUtilisateur(Utilisateur.StatutUtilisateur.Inactif);
+            utilisateurRepository.save(u);
+        }));
+        historiqueActionService.enregistrer(
+                "DESACTIVATION_EMPLOYE",
+                "Employé " + employe.getEmailEmploye() + " désactivé",
+                safeActeur());
+        return toResponse(employe);
     }
 
     public void delete(Integer id) {
-        employeRepository.delete(getOrThrow(id));
+        desactiver(id);
+    }
+
+    private String safeActeur() {
+        try {
+            return SecurityUtils.currentUser().getLogin();
+        } catch (Exception e) {
+            return "SYSTEME";
+        }
     }
 
     public Employe getOrThrow(Integer id) {

@@ -45,7 +45,7 @@ public class SuiviTemps {
     @Column(name = "heures_supplementaires", nullable = false, precision = 5, scale = 2)
     private BigDecimal heuresSupplementaires;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = com.example.gestion_rh.model.converter.StatutSuppConverter.class)
     @Column(name = "statut_supp", nullable = false)
     private StatutSupp statutSupp;
 
