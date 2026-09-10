@@ -7,6 +7,12 @@ export const rapportsAPI = {
   getHistorique() {
     return apiClient.get('/rapports/historique')
   },
+  viderHistorique() {
+    return apiClient.delete('/rapports/historique')
+  },
+  getStatut() {
+    return apiClient.get('/rapports/statut')
+  },
   genererHebdo() {
     return apiClient.post('/rapports/generer-hebdo')
   },

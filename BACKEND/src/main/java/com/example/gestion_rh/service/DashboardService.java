@@ -33,12 +33,19 @@ public class DashboardService {
     private static final DateTimeFormatter JOUR_FMT = DateTimeFormatter.ofPattern("dd/MM");
 
     public EntrepriseDashboardResponse vueEntreprise() {
+        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
         LocalDate today = LocalDate.now();
         int mois = today.getMonthValue();
         int annee = today.getYear();
 
-        List<Employe> actifs = employeRepository.findByStatutEmploye(Employe.StatutEmploye.Actif);
-        List<Employe> inactifs = employeRepository.findByStatutEmploye(Employe.StatutEmploye.Inactif);
+        List<Employe> actifs = employeRepository
+                .findByEntreprise_IdEntrepriseAndStatutEmploye(idEntreprise, Employe.StatutEmploye.Actif);
+        List<Employe> inactifs = employeRepository
+                .findByEntreprise_IdEntrepriseAndStatutEmploye(idEntreprise, Employe.StatutEmploye.Inactif);
+        java.util.Set<Integer> employeIds = actifs.stream()
+                .map(Employe::getIdEmploye)
+                .collect(Collectors.toSet());
+        employeIds.addAll(inactifs.stream().map(Employe::getIdEmploye).toList());
 
         BigDecimal masse = actifs.stream()
                 .map(Employe::getSalaireBase)
@@ -46,12 +53,20 @@ public class DashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         List<DemandeConge> congesAttente = demandeCongeRepository
-                .findByStatutConge(DemandeConge.StatutConge.En_attente);
+                .findByStatutConge(DemandeConge.StatutConge.En_attente).stream()
+                .filter(c -> c.getEmploye() != null && employeIds.contains(c.getEmploye().getIdEmploye()))
+                .toList();
         List<SuiviTemps> hsAttente = suiviTempsRepository
-                .findByStatutSupp(SuiviTemps.StatutSupp.En_attente);
-        List<SuiviTemps> pointagesJour = suiviTempsRepository.findByDateTravail(today);
+                .findByStatutSupp(SuiviTemps.StatutSupp.En_attente).stream()
+                .filter(s -> s.getEmploye() != null && employeIds.contains(s.getEmploye().getIdEmploye()))
+                .toList();
+        List<SuiviTemps> pointagesJour = suiviTempsRepository.findByDateTravail(today).stream()
+                .filter(s -> s.getEmploye() != null && employeIds.contains(s.getEmploye().getIdEmploye()))
+                .toList();
 
-        List<Paiement> paiementsMois = paiementRepository.findByMoisAndAnnee(mois, annee);
+        List<Paiement> paiementsMois = paiementRepository.findByMoisAndAnnee(mois, annee).stream()
+                .filter(p -> p.getEmploye() != null && employeIds.contains(p.getEmploye().getIdEmploye()))
+                .toList();
         long paiementsEffectues = paiementsMois.stream()
                 .filter(p -> p.getStatut() == Paiement.StatutPaiement.Effectué)
                 .count();
@@ -64,7 +79,8 @@ public class DashboardService {
 
         long rapportsNonLus = compterRapportsNonLus();
 
-        List<EntrepriseDashboardResponse.DepartementStat> parDept = departementRepository.findAll().stream()
+        List<EntrepriseDashboardResponse.DepartementStat> parDept = departementRepository
+                .findByEntreprise_IdEntrepriseOrderByNomDepartementAsc(idEntreprise).stream()
                 .map(d -> EntrepriseDashboardResponse.DepartementStat.builder()
                         .idDepartement(d.getIdDepartement())
                         .nomDepartement(d.getNomDepartement())
@@ -98,7 +114,9 @@ public class DashboardService {
                 .toList();
 
         LocalDate debut7 = today.minusDays(6);
-        List<SuiviTemps> suivis7j = suiviTempsRepository.findByDateTravailBetween(debut7, today);
+        List<SuiviTemps> suivis7j = suiviTempsRepository.findByDateTravailBetween(debut7, today).stream()
+                .filter(s -> s.getEmploye() != null && employeIds.contains(s.getEmploye().getIdEmploye()))
+                .toList();
         Map<LocalDate, Long> countParJour = suivis7j.stream()
                 .collect(Collectors.groupingBy(SuiviTemps::getDateTravail, Collectors.counting()));
         Map<LocalDate, Double> hsParJour = suivis7j.stream()
@@ -123,10 +141,13 @@ public class DashboardService {
                     .build());
         }
 
+        long nbDepts = departementRepository
+                .findByEntreprise_IdEntrepriseOrderByNomDepartementAsc(idEntreprise).size();
+
         return EntrepriseDashboardResponse.builder()
                 .employesActifs(actifs.size())
                 .employesInactifs(inactifs.size())
-                .totalDepartements(departementRepository.count())
+                .totalDepartements(nbDepts)
                 .congesEnAttente(congesAttente.size())
                 .heuresSuppEnAttente(hsAttente.size())
                 .pointagesAujourdhui(pointagesJour.size())
@@ -149,7 +170,11 @@ public class DashboardService {
         if (courant.getRole() == Utilisateur.Role.DG) {
             return rapportRepository.countByDestinataireAndLuFalse(courant);
         }
-        return rapportRepository.countByLuFalse();
+        if (courant.getEntreprise() != null && courant.getEntreprise().getIdEntreprise() != null) {
+            return rapportRepository.countByEntreprise_IdEntrepriseAndLuFalse(
+                    courant.getEntreprise().getIdEntreprise());
+        }
+        return 0;
     }
 
     private String nom(Employe e) {

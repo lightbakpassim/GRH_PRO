@@ -20,4 +20,4 @@ cd grh-pro && npm install && npm run dev
 | API | http://localhost:8080 |
 | Swagger | http://localhost:8080/swagger-ui.html |
 
-**Comptes test** (si `SEED_TEST_USERS=true`) : `admin@grh.tg` / `admin123` · `dg@grh.tg` / `dgChangeMe1`
+**Comptes test** (si `SEED_TEST_USERS=true`) : `plateforme@grh.tg` / `plateforme123` · `admin@grh.tg` / `admin123` · `dg@grh.tg` / `dgChangeMe1`

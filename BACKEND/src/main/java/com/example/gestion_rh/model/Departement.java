@@ -21,6 +21,10 @@ public class Departement {
     @Column(name = "nom_departement", nullable = false, length = 255)
     private String nomDepartement;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_entreprise")
+    private Entreprise entreprise;
+
     @OneToMany(mappedBy = "departement", fetch = FetchType.LAZY)
     private List<Employe> employes;
 }

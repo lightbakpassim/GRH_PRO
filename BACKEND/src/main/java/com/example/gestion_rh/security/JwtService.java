@@ -37,6 +37,8 @@ public class JwtService {
         extraClaims.put("role", utilisateur.getRole().name());
         extraClaims.put("idEmploye", utilisateur.getEmploye() != null
                 ? utilisateur.getEmploye().getIdEmploye() : null);
+        extraClaims.put("idEntreprise", utilisateur.getEntreprise() != null
+                ? utilisateur.getEntreprise().getIdEntreprise() : null);
         return Jwts.builder()
                 .claims(extraClaims)
                 .subject(utilisateur.getUsername())

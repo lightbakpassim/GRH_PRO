@@ -46,6 +46,11 @@ public class Utilisateur implements UserDetails {
     @JoinColumn(name = "id_employe")
     private Employe employe;
 
+    /** Tenant SaaS — null pour SuperAdmin plateforme. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_entreprise")
+    private Entreprise entreprise;
+
     // ==================== UserDetails ====================
 
     @Override
@@ -86,5 +91,5 @@ public class Utilisateur implements UserDetails {
     // Enums internes
     public enum StatutUtilisateur { Actif, Inactif }
 
-    public enum Role { Admin, Employe, DG }
+    public enum Role { Admin, Employe, DG, SuperAdmin }
 }

@@ -1,8 +1,18 @@
 <template>
   <div class="space-y-6">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-800">Historique des actions</h1>
-      <p class="text-gray-500 mt-1">Traçabilité (employés, rapports, MDP, paiements validés…)</p>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">Historique des actions</h1>
+        <p class="text-gray-500 mt-1">Traçabilité propre à votre entreprise</p>
+      </div>
+      <button
+          type="button"
+          class="px-4 py-2 text-sm font-medium rounded-lg border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-40"
+          :disabled="clearing || !items.length"
+          @click="vider"
+      >
+        {{ clearing ? 'Suppression…' : 'Vider l’historique' }}
+      </button>
     </div>
     <div class="bg-white rounded-lg border shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
@@ -37,17 +47,34 @@ import { ref, onMounted } from 'vue'
 import { rapportsAPI } from '@/API/rapports'
 import { useToast } from '@/composable/useToast'
 
-const { error } = useToast()
+const { success, error } = useToast()
 const items = ref([])
+const clearing = ref(false)
 
-onMounted(async () => {
+const load = async () => {
   try {
     const { data } = await rapportsAPI.getHistorique()
     items.value = data
   } catch (err) {
     error(err.response?.data?.message || 'Erreur historique')
   }
-})
+}
+
+onMounted(load)
+
+const vider = async () => {
+  if (!confirm('Supprimer définitivement tout l’historique de votre entreprise ?')) return
+  clearing.value = true
+  try {
+    const { data } = await rapportsAPI.viderHistorique()
+    success(`${data.supprimes ?? 0} entrée(s) supprimée(s)`)
+    items.value = []
+  } catch (err) {
+    error(err.response?.data?.message || 'Impossible de vider l’historique')
+  } finally {
+    clearing.value = false
+  }
+}
 
 const formatDate = (d) => d ? new Date(d).toLocaleString('fr-FR') : ''
 </script>

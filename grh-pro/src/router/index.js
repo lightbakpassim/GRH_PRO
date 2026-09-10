@@ -23,7 +23,13 @@ import DgHistorique from '@/pages/dg/DgHistorique.vue'
 import AdminRapports from '@/pages/admin/AdminRapports.vue'
 import AdminDepartements from '@/pages/admin/AdminDepartements.vue'
 
+import PlateformeLayout from '@/pages/plateforme/PlateformeLayout.vue'
+import PlateformeDashboard from '@/pages/plateforme/PlateformeDashboard.vue'
+import PlateformeEntreprises from '@/pages/plateforme/PlateformeEntreprises.vue'
+import PlateformeCompte from '@/pages/plateforme/PlateformeCompte.vue'
+
 const homeForRole = (role) => {
+  if (role === 'SuperAdmin') return '/plateforme'
   if (role === 'Admin') return '/admin'
   if (role === 'DG') return '/dg'
   return '/employe'
@@ -71,6 +77,18 @@ const routes = [
       { path: 'dashboard', name: 'DgDashboard', component: DgDashboard },
       { path: 'rapports', name: 'DgRapports', component: DgRapports },
       { path: 'historique', name: 'DgHistorique', component: DgHistorique },
+    ]
+  },
+
+  {
+    path: '/plateforme',
+    component: PlateformeLayout,
+    meta: { requiresAuth: true, role: 'SuperAdmin' },
+    children: [
+      { path: '', redirect: '/plateforme/dashboard' },
+      { path: 'dashboard', name: 'PlateformeDashboard', component: PlateformeDashboard },
+      { path: 'entreprises', name: 'PlateformeEntreprises', component: PlateformeEntreprises },
+      { path: 'compte', name: 'PlateformeCompte', component: PlateformeCompte },
     ]
   },
 

@@ -61,6 +61,10 @@ public class Employe {
     @JoinColumn(name = "id_departement")
     private Departement departement;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_entreprise")
+    private Entreprise entreprise;
+
     @OneToOne(mappedBy = "employe", fetch = FetchType.LAZY)
     private Utilisateur utilisateur;
 

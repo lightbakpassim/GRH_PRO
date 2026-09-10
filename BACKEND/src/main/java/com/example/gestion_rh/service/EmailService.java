@@ -67,4 +67,49 @@ public class EmailService {
             throw new IllegalStateException("Échec d'envoi de l'email à " + to + " : " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Envoie le PDF hebdomadaire au DG (login email).
+     * No-op silencieux si mail désactivé ; lève si SMTP échoue.
+     */
+    public void envoyerRapportPdf(String to, String nomEntreprise, String sujet,
+                                  String nomFichier, byte[] pdf) {
+        if (!mailEnabled) {
+            log.debug("MAIL_ENABLED=false — rapport « {} » non envoyé par email", sujet);
+            return;
+        }
+        if (to == null || to.isBlank() || !to.contains("@")) {
+            log.warn("Login DG non email — rapport non envoyé par mail : {}", to);
+            return;
+        }
+        if (pdf == null || pdf.length == 0) {
+            throw new IllegalStateException("PDF vide — envoi impossible");
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(to.trim());
+            helper.setSubject(sujet != null ? sujet : "GRH Pro — Rapport hebdomadaire");
+            helper.setText("""
+                    Bonjour,
+
+                    Veuillez trouver ci-joint le rapport hebdomadaire d'activité
+                    de l'entreprise « %s ».
+
+                    Ce document est strictement confidentiel et propre à votre organisation.
+
+                    Cordialement,
+                    Plateforme GRH Pro
+                    """.formatted(nomEntreprise != null ? nomEntreprise : "votre entreprise"), false);
+            helper.addAttachment(
+                    nomFichier != null ? nomFichier : "rapport-hebdomadaire.pdf",
+                    () -> new java.io.ByteArrayInputStream(pdf),
+                    "application/pdf");
+            mailSender.send(message);
+            log.info("Rapport PDF envoyé à {} ({})", to, nomEntreprise);
+        } catch (MessagingException | MailException e) {
+            throw new IllegalStateException("Échec d'envoi du rapport à " + to + " : " + e.getMessage(), e);
+        }
+    }
 }

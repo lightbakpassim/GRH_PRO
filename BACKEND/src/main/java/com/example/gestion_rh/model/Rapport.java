@@ -40,6 +40,10 @@ public class Rapport {
     @JoinColumn(name = "destinataire_id", nullable = false)
     private Utilisateur destinataire;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_entreprise")
+    private Entreprise entreprise;
+
     @Lob
     @Basic(fetch = FetchType.LAZY)
     @Column(name = "fichier_pdf", nullable = false, columnDefinition = "LONGBLOB")

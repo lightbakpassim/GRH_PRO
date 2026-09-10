@@ -30,8 +30,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiError> handleBadCredentials(BadCredentialsException ex) {
+        String message = ex.getMessage() != null && !ex.getMessage().isBlank()
+                ? ex.getMessage()
+                : "Login ou mot de passe incorrect";
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ApiError(HttpStatus.UNAUTHORIZED.value(), "Login ou mot de passe incorrect", LocalDateTime.now()));
+                .body(new ApiError(HttpStatus.UNAUTHORIZED.value(), message, LocalDateTime.now()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

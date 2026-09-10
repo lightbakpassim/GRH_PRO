@@ -1,13 +1,14 @@
 package com.example.gestion_rh.service;
 
-
 import com.example.gestion_rh.dto.request.DepartementRequest;
 import com.example.gestion_rh.dto.response.DepartementResponse;
 import com.example.gestion_rh.exception.BusinessException;
 import com.example.gestion_rh.exception.ResourceNotFoundException;
 import com.example.gestion_rh.model.Departement;
+import com.example.gestion_rh.model.Entreprise;
 import com.example.gestion_rh.repository.DepartementRepository;
 import com.example.gestion_rh.repository.EmployeRepository;
+import com.example.gestion_rh.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,8 @@ public class DepartementService {
     private final EmployeRepository employeRepository;
 
     public List<DepartementResponse> findAll() {
-        return departementRepository.findAll().stream()
+        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
+        return departementRepository.findByEntreprise_IdEntrepriseOrderByNomDepartementAsc(idEntreprise).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -33,11 +35,15 @@ public class DepartementService {
     }
 
     public DepartementResponse create(DepartementRequest request) {
-        if (departementRepository.existsByNomDepartement(request.getNomDepartement())) {
+        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
+        if (departementRepository.existsByNomDepartementAndEntreprise_IdEntreprise(
+                request.getNomDepartement(), idEntreprise)) {
             throw new BusinessException("Un département avec ce nom existe déjà");
         }
+        Entreprise entreprise = SecurityUtils.currentEntrepriseOrNull();
         Departement dept = Departement.builder()
                 .nomDepartement(request.getNomDepartement())
+                .entreprise(entreprise)
                 .build();
         return toResponse(departementRepository.save(dept));
     }
@@ -58,7 +64,8 @@ public class DepartementService {
     }
 
     private Departement getOrThrow(Integer id) {
-        return departementRepository.findById(id)
+        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
+        return departementRepository.findByIdDepartementAndEntreprise_IdEntreprise(id, idEntreprise)
                 .orElseThrow(() -> new ResourceNotFoundException("Département introuvable avec l'id : " + id));
     }
 

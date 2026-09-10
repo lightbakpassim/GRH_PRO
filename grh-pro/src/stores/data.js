@@ -12,10 +12,16 @@ export const useAuthStore = defineStore('auth', () => {
             login: email,
             motDePasse: password
         })
+        applySession(data)
+        return { success: true, user: user.value }
+    }
 
+    const applySession = (data) => {
         user.value = {
             id: data.idEmploye,
             idEmploye: data.idEmploye,
+            idEntreprise: data.idEntreprise,
+            nomEntreprise: data.nomEntreprise,
             name: data.nomComplet,
             email: data.login,
             role: data.role
@@ -23,8 +29,6 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = data.token
         localStorage.setItem('auth_token', data.token)
         localStorage.setItem('user', JSON.stringify(user.value))
-
-        return { success: true, user: user.value }
     }
 
     const logout = () => {
@@ -55,6 +59,7 @@ export const useAuthStore = defineStore('auth', () => {
         isAuthenticated,
         login,
         logout,
-        checkAuth
+        checkAuth,
+        applySession
     }
 })

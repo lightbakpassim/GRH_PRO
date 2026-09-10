@@ -2,7 +2,9 @@
   <div class="space-y-6">
     <div>
       <h1 class="text-2xl font-bold text-gray-800">Rapports reçus</h1>
-      <p class="text-gray-500 mt-1">PDF générés par le GRH — consultation uniquement</p>
+      <p class="text-gray-500 mt-1">
+        PDF de l’activité de votre entreprise — livrés chaque vendredi à 22h
+      </p>
     </div>
 
     <div class="bg-white rounded-lg border shadow-sm overflow-hidden">

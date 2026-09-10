@@ -16,5 +16,7 @@ public class AuthResponse {
     private String login;
     private Utilisateur.Role role;
     private Integer idEmploye;
+    private Integer idEntreprise;
+    private String nomEntreprise;
     private String nomComplet;
 }

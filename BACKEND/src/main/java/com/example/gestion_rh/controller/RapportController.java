@@ -46,7 +46,7 @@ public class RapportController {
     @PostMapping("/generer-hebdo")
     @PreAuthorize("hasRole('Admin')")
     public ResponseEntity<RapportResponse> genererMaintenant() {
-        Rapport r = rapportService.genererEtLivrerRapportHebdomadaire();
+        Rapport r = rapportService.genererPourEntrepriseCourante();
         return ResponseEntity.ok(RapportResponse.builder()
                 .idRapport(r.getIdRapport())
                 .titre(r.getTitre())
@@ -65,12 +65,16 @@ public class RapportController {
         return ResponseEntity.ok(rapportService.historique());
     }
 
+    @DeleteMapping("/historique")
+    @PreAuthorize("hasRole('DG')")
+    public ResponseEntity<Map<String, Object>> viderHistorique() {
+        int n = rapportService.viderHistorique();
+        return ResponseEntity.ok(Map.of("supprimes", n));
+    }
+
     @GetMapping("/statut")
     @PreAuthorize("hasAnyRole('DG','Admin')")
     public ResponseEntity<Map<String, Object>> statut() {
-        return ResponseEntity.ok(Map.of(
-                "planification", "Vendredi 22:00 Africa/Lome",
-                "livraison", "In-app (espace DG)"
-        ));
+        return ResponseEntity.ok(rapportService.statutGeneration());
     }
 }

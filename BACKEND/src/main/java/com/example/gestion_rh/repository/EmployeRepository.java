@@ -1,10 +1,13 @@
 package com.example.gestion_rh.repository;
 
 import com.example.gestion_rh.model.Employe;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +21,19 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
     List<Employe> findByDepartement_IdDepartement(Integer idDepartement);
 
     List<Employe> findByStatutEmploye(Employe.StatutEmploye statut);
+
+    List<Employe> findByEntreprise_IdEntreprise(Integer idEntreprise);
+
+    List<Employe> findByEntreprise_IdEntrepriseAndStatutEmploye(Integer idEntreprise, Employe.StatutEmploye statut);
+
+    Page<Employe> findByEntreprise_IdEntreprise(Integer idEntreprise, Pageable pageable);
+
+    Optional<Employe> findByIdEmployeAndEntreprise_IdEntreprise(Integer idEmploye, Integer idEntreprise);
+
+    @Query("SELECT e FROM Employe e WHERE e.entreprise.idEntreprise = :eid AND (" +
+            "LOWER(e.nomEmploye) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "OR LOWER(e.prenomEmploye) LIKE LOWER(CONCAT('%', :search, '%')))")
+    List<Employe> searchByEntrepriseAndNom(@Param("eid") Integer idEntreprise, @Param("search") String search);
 
     @Query("SELECT e FROM Employe e WHERE LOWER(e.nomEmploye) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(e.prenomEmploye) LIKE LOWER(CONCAT('%', :search, '%'))")

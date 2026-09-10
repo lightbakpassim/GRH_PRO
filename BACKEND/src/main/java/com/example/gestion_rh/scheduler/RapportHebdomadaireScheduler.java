@@ -13,15 +13,15 @@ public class RapportHebdomadaireScheduler {
 
     private final RapportService rapportService;
 
-    /** Chaque vendredi à 22:00 GMT. */
-    @Scheduled(cron = "0 0 22 * * FRI", zone = "GMT")
+    /** Chaque vendredi à 22:00 (Africa/Lome) — un PDF par entreprise, livré à son DG. */
+    @Scheduled(cron = "0 0 22 * * FRI", zone = "Africa/Lome")
     public void genererVendrediSoir() {
         try {
-            var rapport = rapportService.genererEtLivrerRapportHebdomadaire();
-            log.info("Rapport hebdo généré automatiquement (vendredi 22h GMT) id={} fichier={}",
-                    rapport.getIdRapport(), rapport.getNomFichier());
+            var rapports = rapportService.genererTousLesRapportsHebdomadaires();
+            log.info("Rapports hebdo générés automatiquement (vendredi 22h Africa/Lome) : {} entreprise(s)",
+                    rapports.size());
         } catch (Exception e) {
-            log.error("Échec génération rapport hebdomadaire automatique : {}", e.getMessage(), e);
+            log.error("Échec génération rapports hebdomadaires automatiques : {}", e.getMessage(), e);
         }
     }
 }

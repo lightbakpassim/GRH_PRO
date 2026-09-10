@@ -5,6 +5,7 @@ import com.example.gestion_rh.model.Utilisateur;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -12,9 +13,15 @@ public interface RapportRepository extends JpaRepository<Rapport, Integer> {
 
     List<Rapport> findByDestinataireOrderByDateGenerationDesc(Utilisateur destinataire);
 
+    List<Rapport> findByEntreprise_IdEntrepriseOrderByDateGenerationDesc(Integer idEntreprise);
+
     long countByDestinataireAndLuFalse(Utilisateur destinataire);
 
-    List<Rapport> findAllByOrderByDateGenerationDesc();
+    long countByEntreprise_IdEntrepriseAndLuFalse(Integer idEntreprise);
 
-    long countByLuFalse();
+    boolean existsByEntreprise_IdEntrepriseAndPeriodeDebutAndPeriodeFinAndTypeRapport(
+            Integer idEntreprise,
+            LocalDate periodeDebut,
+            LocalDate periodeFin,
+            Rapport.TypeRapport typeRapport);
 }

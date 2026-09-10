@@ -58,11 +58,23 @@ public class JwtAuthentificationFilter extends OncePerRequestFilter {
             Utilisateur utilisateur = utilisateurRepository.findByLoginWithEmploye(login).orElse(null);
 
             if (utilisateur != null && jwtService.isTokenValid(jwt, utilisateur)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        utilisateur, null, utilisateur.getAuthorities()
-                );
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                boolean compteOk = utilisateur.getStatutUtilisateur() == Utilisateur.StatutUtilisateur.Actif;
+                boolean tenantOk;
+                if (utilisateur.getRole() == Utilisateur.Role.SuperAdmin) {
+                    tenantOk = true;
+                } else if (utilisateur.getEntreprise() == null) {
+                    tenantOk = false;
+                } else {
+                    tenantOk = utilisateur.getEntreprise().getStatut()
+                            == com.example.gestion_rh.model.Entreprise.StatutEntreprise.Actif;
+                }
+                if (compteOk && tenantOk) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            utilisateur, null, utilisateur.getAuthorities()
+                    );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
         }
 
