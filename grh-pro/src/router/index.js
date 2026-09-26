@@ -92,12 +92,16 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  if (to.meta.role && isAuthenticated && userRole !== to.meta.role) {
+  if (to.meta.role && userRole !== to.meta.role) {
     next(homeForRole(userRole))
     return
   }
 
-  // Toujours afficher la page de connexion (pas de skip auto via session)
+  if (to.path === '/login' && isAuthenticated) {
+    next(homeForRole(userRole))
+    return
+  }
+
   next()
 })
 
