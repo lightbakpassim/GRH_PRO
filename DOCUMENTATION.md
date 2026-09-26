@@ -136,11 +136,10 @@ Si `SEED_TEST_USERS=true` (défaut), le `DataSeeder` crée / réinitialise au d�
 
 | Rôle | Login | Mot de passe |
 |------|--------|--------------|
-| SuperAdmin (plateforme) | `plateforme@grh.tg` | `plateforme123` |
 | Admin | `admin@grh.tg` | `admin123` |
 | DG | `dg@grh.tg` | `dgChangeMe1` |
 
-Les comptes employés se créent via l’interface Admin. L’espace `/plateforme` permet d’onboarder une entreprise (compte DG) et de suspendre un tenant.
+Les comptes employés se créent via l’interface Admin (plus de compte employé seed).
 
 Le seeder / `SchemaInitializer` normalise aussi la colonne `role` (VARCHAR, `Employe` sans accent).
 

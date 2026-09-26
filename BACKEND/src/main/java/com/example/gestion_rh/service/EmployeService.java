@@ -7,7 +7,6 @@ import com.example.gestion_rh.exception.BusinessException;
 import com.example.gestion_rh.exception.ResourceNotFoundException;
 import com.example.gestion_rh.model.Departement;
 import com.example.gestion_rh.model.Employe;
-import com.example.gestion_rh.model.Entreprise;
 import com.example.gestion_rh.model.Utilisateur;
 import com.example.gestion_rh.repository.DepartementRepository;
 import com.example.gestion_rh.repository.EmployeRepository;
@@ -37,15 +36,11 @@ public class EmployeService {
     private final HistoriqueActionService historiqueActionService;
 
     public PageResponse<EmployeResponse> findAll(Pageable pageable) {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return PageResponse.from(
-                employeRepository.findByEntreprise_IdEntreprise(idEntreprise, pageable).map(this::toResponse));
+        return PageResponse.from(employeRepository.findAll(pageable).map(this::toResponse));
     }
 
     public List<EmployeResponse> findAll() {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return employeRepository.findByEntreprise_IdEntreprise(idEntreprise).stream()
-                .map(this::toResponse).toList();
+        return employeRepository.findAll().stream().map(this::toResponse).toList();
     }
 
     public EmployeResponse findById(Integer id) {
@@ -53,21 +48,16 @@ public class EmployeService {
     }
 
     public List<EmployeResponse> findByDepartement(Integer idDepartement) {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return employeRepository.findByDepartement_IdDepartement(idDepartement).stream()
-                .filter(e -> e.getEntreprise() != null
-                        && idEntreprise.equals(e.getEntreprise().getIdEntreprise()))
-                .map(this::toResponse).toList();
+        return employeRepository.findByDepartement_IdDepartement(idDepartement)
+                .stream().map(this::toResponse).toList();
     }
 
     public List<EmployeResponse> search(String query) {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return employeRepository.searchByEntrepriseAndNom(idEntreprise, query)
+        return employeRepository.searchByNomOrPrenom(query)
                 .stream().map(this::toResponse).toList();
     }
 
     public EmployeResponse create(EmployeRequest request) {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
         if (request.getIdDepartement() == null) {
             throw new BusinessException("Le département est obligatoire à la création");
         }
@@ -78,11 +68,8 @@ public class EmployeService {
             throw new BusinessException("Un compte utilisateur existe déjà pour cet email");
         }
 
-        Departement dept = departementRepository
-                .findByIdDepartementAndEntreprise_IdEntreprise(request.getIdDepartement(), idEntreprise)
+        Departement dept = departementRepository.findById(request.getIdDepartement())
                 .orElseThrow(() -> new ResourceNotFoundException("Département introuvable"));
-
-        Entreprise entreprise = SecurityUtils.currentEntrepriseOrNull();
 
         Employe employe = Employe.builder()
                 .nomEmploye(request.getNomEmploye())
@@ -98,20 +85,17 @@ public class EmployeService {
                         ? request.getStatutEmploye()
                         : Employe.StatutEmploye.Actif)
                 .departement(dept)
-                .entreprise(entreprise)
                 .build();
 
         employe = employeRepository.save(employe);
 
         String motDePasseClair = PasswordGenerator.generate(12);
-        Utilisateur acteur = SecurityUtils.currentUser();
         utilisateurRepository.save(Utilisateur.builder()
                 .login(request.getEmailEmploye())
                 .motDePasse(passwordEncoder.encode(motDePasseClair))
                 .role(Utilisateur.Role.Employe)
                 .statutUtilisateur(Utilisateur.StatutUtilisateur.Actif)
                 .employe(employe)
-                .entreprise(acteur != null ? acteur.getEntreprise() : null)
                 .build());
 
         String nomComplet = employe.getPrenomEmploye() + " " + employe.getNomEmploye();
@@ -154,9 +138,7 @@ public class EmployeService {
             throw new BusinessException("Cet email est déjà utilisé par un autre employé");
         }
 
-        Departement dept = departementRepository
-                .findByIdDepartementAndEntreprise_IdEntreprise(
-                        request.getIdDepartement(), SecurityUtils.requireIdEntreprise())
+        Departement dept = departementRepository.findById(request.getIdDepartement())
                 .orElseThrow(() -> new ResourceNotFoundException("Département introuvable"));
 
         employe.setNomEmploye(request.getNomEmploye());
@@ -267,8 +249,7 @@ public class EmployeService {
     }
 
     public Employe getOrThrow(Integer id) {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return employeRepository.findByIdEmployeAndEntreprise_IdEntreprise(id, idEntreprise)
+        return employeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé introuvable avec l'id : " + id));
     }
 

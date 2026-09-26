@@ -123,7 +123,7 @@
         </div>
 
         <p class="mt-6 text-center text-xs text-slate-400">
-          L’espace (Plateforme, Admin, Employé ou DG) s’ouvre automatiquement selon votre compte.
+          L’espace (Admin, Employé ou DG) s’ouvre automatiquement selon votre compte.
         </p>
       </div>
     </div>
@@ -152,7 +152,6 @@ const form = reactive({
 })
 
 const homeForRole = (role) => {
-  if (role === 'SuperAdmin') return '/plateforme'
   if (role === 'Admin') return '/admin'
   if (role === 'DG') return '/dg'
   return '/employe'

@@ -30,8 +30,4 @@ public class HistoriqueAction {
 
     @Column(name = "date_action", nullable = false)
     private LocalDateTime dateAction;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_entreprise")
-    private Entreprise entreprise;
 }

@@ -32,14 +32,12 @@ const props = defineProps({
     // [{ label, data, color }]
   },
   height: { type: Number, default: 260 },
-  yTitle: { type: String, default: '' },
-  showEmpty: { type: Boolean, default: false }
+  yTitle: { type: String, default: '' }
 })
 
-const hasData = computed(() => {
-  if (props.showEmpty && props.labels.length) return true
-  return props.datasets.some(ds => (ds.data || []).some(v => Number(v) > 0))
-})
+const hasData = computed(() =>
+  props.datasets.some(ds => (ds.data || []).some(v => Number(v) > 0))
+)
 
 const chartData = computed(() => ({
   labels: props.labels,

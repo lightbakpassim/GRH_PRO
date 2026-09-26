@@ -14,7 +14,6 @@ import com.example.gestion_rh.model.SuiviTemps;
 import com.example.gestion_rh.repository.AbsenceRepository;
 import com.example.gestion_rh.repository.PaiementRepository;
 import com.example.gestion_rh.repository.SuiviTempsRepository;
-import com.example.gestion_rh.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
@@ -53,20 +52,11 @@ public class PaiementService {
     private BigDecimal heuresParJour;
 
     public PageResponse<PaiementResponse> findAll(Pageable pageable) {
-        List<PaiementResponse> all = findAll();
-        int start = (int) pageable.getOffset();
-        int end = Math.min(start + pageable.getPageSize(), all.size());
-        List<PaiementResponse> slice = start >= all.size() ? List.of() : all.subList(start, end);
-        int totalPages = pageable.getPageSize() == 0 ? 0
-                : (int) Math.ceil((double) all.size() / pageable.getPageSize());
-        return new PageResponse<>(slice, pageable.getPageNumber(), pageable.getPageSize(), all.size(), totalPages);
+        return PageResponse.from(paiementRepository.findAll(pageable).map(this::toResponse));
     }
 
     public List<PaiementResponse> findAll() {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return paiementRepository.findByEntreprise(idEntreprise).stream()
-                .map(this::toResponse)
-                .toList();
+        return paiementRepository.findAll().stream().map(this::toResponse).toList();
     }
 
     public PaiementResponse findById(Integer id) {
@@ -74,14 +64,12 @@ public class PaiementService {
     }
 
     public List<PaiementResponse> findByEmploye(Integer idEmploye) {
-        employeService.getOrThrow(idEmploye); // vérifie le tenant
         return paiementRepository.findHistoriqueByEmploye(idEmploye)
                 .stream().map(this::toResponse).toList();
     }
 
     public List<PaiementResponse> findByMoisAnnee(int mois, int annee) {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return paiementRepository.findByEntrepriseAndMoisAndAnnee(idEntreprise, mois, annee)
+        return paiementRepository.findByMoisAndAnnee(mois, annee)
                 .stream().map(this::toResponse).toList();
     }
 
@@ -275,8 +263,7 @@ public class PaiementService {
     }
 
     private Paiement getOrThrow(Integer id) {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return paiementRepository.findByIdPaiementAndEmploye_Entreprise_IdEntreprise(id, idEntreprise)
+        return paiementRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paiement introuvable avec l'id : " + id));
     }
 

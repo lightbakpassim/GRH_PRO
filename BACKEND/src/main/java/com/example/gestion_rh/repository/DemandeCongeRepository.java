@@ -33,16 +33,4 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Inte
             "AND YEAR(d.dateDebut) = :annee")
     Integer totalJoursApprouvesPourAnnee(@Param("id") Integer idEmploye,
                                          @Param("annee") int annee);
-
-    @Query("""
-            SELECT d FROM DemandeConge d
-            WHERE d.employe.entreprise.idEntreprise = :eid
-              AND d.dateDemande >= :debut
-              AND d.dateDemande < :finExclu
-            ORDER BY d.dateDemande ASC
-            """)
-    List<DemandeConge> findByEntrepriseAndDateDemandeBetween(
-            @Param("eid") Integer idEntreprise,
-            @Param("debut") java.time.LocalDateTime debut,
-            @Param("finExclu") java.time.LocalDateTime finExclu);
 }

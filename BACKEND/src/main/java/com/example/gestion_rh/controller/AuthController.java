@@ -2,7 +2,6 @@ package com.example.gestion_rh.controller;
 
 import com.example.gestion_rh.dto.request.ChangePasswordRequest;
 import com.example.gestion_rh.dto.request.LoginRequest;
-import com.example.gestion_rh.dto.request.UpdateProfilRequest;
 import com.example.gestion_rh.dto.response.AuthResponse;
 import com.example.gestion_rh.service.AuthService;
 import jakarta.validation.Valid;
@@ -23,18 +22,6 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
-    }
-
-    @GetMapping("/me")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<AuthResponse> me() {
-        return ResponseEntity.ok(authService.me());
-    }
-
-    @PatchMapping("/profil")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<AuthResponse> updateProfil(@Valid @RequestBody UpdateProfilRequest request) {
-        return ResponseEntity.ok(authService.updateProfil(request));
     }
 
     @PatchMapping("/change-password")

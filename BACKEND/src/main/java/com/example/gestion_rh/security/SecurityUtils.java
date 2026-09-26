@@ -1,7 +1,6 @@
 package com.example.gestion_rh.security;
 
 import com.example.gestion_rh.exception.BusinessException;
-import com.example.gestion_rh.model.Entreprise;
 import com.example.gestion_rh.model.Utilisateur;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -24,23 +23,6 @@ public final class SecurityUtils {
         return utilisateur.getRole() == Utilisateur.Role.Admin;
     }
 
-    public static boolean isSuperAdmin(Utilisateur utilisateur) {
-        return utilisateur.getRole() == Utilisateur.Role.SuperAdmin;
-    }
-
-    /** Entreprise du locataire connecté (null pour SuperAdmin). */
-    public static Entreprise currentEntrepriseOrNull() {
-        return currentUser().getEntreprise();
-    }
-
-    public static Integer requireIdEntreprise() {
-        Entreprise e = currentEntrepriseOrNull();
-        if (e == null || e.getIdEntreprise() == null) {
-            throw new BusinessException("Aucune entreprise associée à ce compte");
-        }
-        return e.getIdEntreprise();
-    }
-
     public static Integer requireIdEmploye(Utilisateur utilisateur) {
         if (utilisateur.getEmploye() == null || utilisateur.getEmploye().getIdEmploye() == null) {
             throw new BusinessException("Aucun employé lié à cet utilisateur");
@@ -48,6 +30,9 @@ public final class SecurityUtils {
         return utilisateur.getEmploye().getIdEmploye();
     }
 
+    /**
+     * Un Admin peut cibler n'importe quel employé ; un Employe est forcé sur son propre id.
+     */
     public static Integer resolveTargetEmployeId(Utilisateur connecte, Integer requestedIdEmploye) {
         if (isAdmin(connecte)) {
             if (requestedIdEmploye == null) {

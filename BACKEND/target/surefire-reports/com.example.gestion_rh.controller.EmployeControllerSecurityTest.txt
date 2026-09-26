@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.example.gestion_rh.controller.EmployeControllerSecurityTest
 -------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.542 s - in com.example.gestion_rh.controller.EmployeControllerSecurityTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.8 s - in com.example.gestion_rh.controller.EmployeControllerSecurityTest

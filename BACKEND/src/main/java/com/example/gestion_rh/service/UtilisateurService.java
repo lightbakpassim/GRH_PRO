@@ -8,7 +8,6 @@ import com.example.gestion_rh.exception.ResourceNotFoundException;
 import com.example.gestion_rh.model.Employe;
 import com.example.gestion_rh.model.Utilisateur;
 import com.example.gestion_rh.repository.UtilisateurRepository;
-import com.example.gestion_rh.security.SecurityUtils;
 import com.example.gestion_rh.util.PasswordGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,9 +29,7 @@ public class UtilisateurService {
     private final EmailService emailService;
 
     public List<UtilisateurResponse> findAll() {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return utilisateurRepository.findByEntreprise_IdEntreprise(idEntreprise).stream()
-                .map(this::toResponse).toList();
+        return utilisateurRepository.findAll().stream().map(this::toResponse).toList();
     }
 
     public UtilisateurResponse findById(Integer id) {
@@ -40,16 +37,8 @@ public class UtilisateurService {
     }
 
     public UtilisateurResponse create(UtilisateurRequest request) {
-        if (request.getRole() == Utilisateur.Role.SuperAdmin) {
-            throw new BusinessException("Création SuperAdmin interdite depuis l'espace entreprise");
-        }
         if (utilisateurRepository.existsByLogin(request.getLogin())) {
             throw new BusinessException("Ce login est déjà utilisé");
-        }
-
-        var entreprise = SecurityUtils.currentEntrepriseOrNull();
-        if (entreprise == null || entreprise.getIdEntreprise() == null) {
-            throw new BusinessException("Aucune entreprise associée — impossible de créer un compte");
         }
 
         Employe employe = null;
@@ -84,7 +73,6 @@ public class UtilisateurService {
                         : Utilisateur.StatutUtilisateur.Actif)
                 .role(request.getRole())
                 .employe(employe)
-                .entreprise(entreprise)
                 .build();
 
         Utilisateur saved = utilisateurRepository.save(utilisateur);
@@ -101,7 +89,6 @@ public class UtilisateurService {
 
         UtilisateurResponse response = toResponse(saved);
         response.setEmailEnvoye(emailEnvoye);
-        // MDP clair uniquement si l'email a échoué (affichage one-shot RH)
         response.setMotDePasseTemporaire(emailEnvoye ? null : motDePasseClair);
         response.setAvertissement(avertissementMail);
         return response;
@@ -109,10 +96,6 @@ public class UtilisateurService {
 
     public UtilisateurResponse update(Integer id, UtilisateurRequest request) {
         Utilisateur utilisateur = getOrThrow(id);
-
-        if (request.getRole() == Utilisateur.Role.SuperAdmin) {
-            throw new BusinessException("Rôle SuperAdmin interdit");
-        }
 
         if (!utilisateur.getLogin().equals(request.getLogin())
                 && utilisateurRepository.existsByLogin(request.getLogin())) {
@@ -125,9 +108,6 @@ public class UtilisateurService {
         }
         utilisateur.setStatutUtilisateur(request.getStatutUtilisateur());
         utilisateur.setRole(request.getRole());
-        if (utilisateur.getEntreprise() == null) {
-            utilisateur.setEntreprise(SecurityUtils.currentEntrepriseOrNull());
-        }
 
         return toResponse(utilisateurRepository.save(utilisateur));
     }
@@ -157,8 +137,7 @@ public class UtilisateurService {
     }
 
     private Utilisateur getOrThrow(Integer id) {
-        Integer idEntreprise = SecurityUtils.requireIdEntreprise();
-        return utilisateurRepository.findByIdUtilisateurAndEntreprise_IdEntreprise(id, idEntreprise)
+        return utilisateurRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable avec l'id : " + id));
     }
 
