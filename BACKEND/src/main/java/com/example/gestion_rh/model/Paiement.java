@@ -48,7 +48,7 @@ public class Paiement {
     @Column(name = "date_paiement")
     private LocalDateTime datePaiement;
 
-    @Convert(converter = com.example.gestion_rh.model.converter.StatutPaiementConverter.class)
+    @Enumerated(EnumType.STRING)
     @Column(name = "statut")
     private StatutPaiement statut;
 
@@ -56,7 +56,7 @@ public class Paiement {
     private java.util.List<Notification> notifications;
 
     public enum StatutPaiement {
-        En_attente, Effectué, Validé;
+        En_attente, Effectué;
 
         @Override
         public String toString() {

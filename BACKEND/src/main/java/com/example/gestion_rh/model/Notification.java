@@ -29,7 +29,7 @@ public class Notification {
     @Column(name = "message", columnDefinition = "TEXT")
     private String message;
 
-    @Convert(converter = com.example.gestion_rh.model.converter.TypeNotificationConverter.class)
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_notification", nullable = false)
     private TypeNotification typeNotification;
 

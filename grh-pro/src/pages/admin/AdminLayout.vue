@@ -1,33 +1,33 @@
 <template>
-  <div class="flex h-[100dvh] bg-gray-100 overflow-hidden">
-    <AdminSidebar :is-open="sidebarOpen" @close="closeSidebar" @toggle="toggleSidebar" />
+  <div class="flex h-screen bg-gray-100 overflow-hidden">
+    <!-- Sidebar -->
+    <AdminSidebar :is-open="sidebarOpen" @toggle="toggleSidebar" />
 
+    <!-- Overlay mobile -->
     <div
         v-if="sidebarOpen && isMobile"
-        class="fixed inset-0 bg-black/50 z-30 lg:hidden"
-        @click="closeSidebar"
+        class="fixed inset-0 bg-black/50 z-20 lg:hidden"
+        @click="toggleSidebar"
     />
 
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-      <header class="bg-white shadow-sm lg:hidden sticky top-0 z-20">
-        <div class="px-3 py-2.5 flex items-center justify-between gap-2">
+    <!-- Contenu principal -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <!-- Header mobile -->
+      <header class="bg-white shadow-sm lg:hidden">
+        <div class="px-4 py-3 flex items-center justify-between">
           <button
-              type="button"
               @click="toggleSidebar"
-              class="p-2.5 min-h-11 min-w-11 rounded-lg hover:bg-gray-100 transition-colors"
-              aria-label="Ouvrir le menu"
+              class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <Bars3Icon class="w-6 h-6 text-gray-600" />
           </button>
-          <h1 class="text-base sm:text-lg font-semibold text-primary flex items-center gap-2 truncate">
-            <img src="/logo-grh.png" alt="" class="h-7 w-7 rounded object-contain shrink-0" />
-            GRH Pro
-          </h1>
-          <div class="w-11 shrink-0" />
+          <h1 class="text-lg font-semibold text-blue-600">GRH Pro</h1>
+          <div class="w-8"></div>
         </div>
       </header>
 
-      <main class="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6">
+      <!-- Main content -->
+      <main class="flex-1 overflow-y-auto p-4 md:p-6">
         <router-view />
       </main>
     </div>
@@ -35,38 +35,29 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { Bars3Icon } from '@heroicons/vue/24/outline'
-import AdminSidebar from '@/components/AdminSidebar.vue'
+import AdminSidebar from '@/components/AdminSiderbar.vue'
 
-const route = useRoute()
 const sidebarOpen = ref(false)
-const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < 1024 : true)
+const isMobile = ref(window.innerWidth < 1024)
 
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
 }
 
-const closeSidebar = () => {
-  sidebarOpen.value = false
-}
-
 const handleResize = () => {
   isMobile.value = window.innerWidth < 1024
-  if (!isMobile.value) sidebarOpen.value = false
+  if (!isMobile.value) {
+    sidebarOpen.value = false
+  }
 }
 
-watch(() => route.fullPath, closeSidebar)
-
-watch(sidebarOpen, (open) => {
-  if (typeof document === 'undefined') return
-  document.body.style.overflow = open && isMobile.value ? 'hidden' : ''
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
 })
 
-onMounted(() => window.addEventListener('resize', handleResize))
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  document.body.style.overflow = ''
 })
 </script>

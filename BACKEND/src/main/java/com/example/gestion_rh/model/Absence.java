@@ -34,11 +34,11 @@ public class Absence {
     @Column(name = "motif_absence", nullable = false, columnDefinition = "TEXT")
     private String motifAbsence;
 
-    @Convert(converter = com.example.gestion_rh.model.converter.StatutAbsenceConverter.class)
+    @Enumerated(EnumType.STRING)
     @Column(name = "statut_absence", nullable = false)
     private StatutAbsence statutAbsence;
 
-    @Convert(converter = com.example.gestion_rh.model.converter.TypeAbsenceConverter.class)
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_absence", nullable = false)
     private TypeAbsence typeAbsence;
 

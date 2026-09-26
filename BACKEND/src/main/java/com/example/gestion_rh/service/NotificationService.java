@@ -7,10 +7,8 @@ import com.example.gestion_rh.exception.ResourceNotFoundException;
 import com.example.gestion_rh.model.Employe;
 import com.example.gestion_rh.model.Notification;
 import com.example.gestion_rh.model.Paiement;
-import com.example.gestion_rh.model.Utilisateur;
 import com.example.gestion_rh.repository.NotificationRepository;
 import com.example.gestion_rh.repository.PaiementRepository;
-import com.example.gestion_rh.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,11 +74,7 @@ public class NotificationService {
         notificationRepository.save(notif);
     }
 
-    public int marquerCommeLue(Integer idNotification, Utilisateur connecte) {
-        Notification notif = notificationRepository.findById(idNotification)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification introuvable avec l'id : " + idNotification));
-        Integer idEmploye = notif.getEmploye() != null ? notif.getEmploye().getIdEmploye() : null;
-        SecurityUtils.assertOwnsEmployeResource(connecte, idEmploye);
+    public int marquerCommeLue(Integer idNotification) {
         return notificationRepository.marquerCommeLue(idNotification);
     }
 

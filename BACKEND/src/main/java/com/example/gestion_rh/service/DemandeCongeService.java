@@ -2,7 +2,6 @@ package com.example.gestion_rh.service;
 
 import com.example.gestion_rh.dto.request.DemandeCongeRequest;
 import com.example.gestion_rh.dto.response.DemandeCongeResponse;
-import com.example.gestion_rh.dto.response.PageResponse;
 import com.example.gestion_rh.exception.BusinessException;
 import com.example.gestion_rh.exception.ResourceNotFoundException;
 import com.example.gestion_rh.model.DemandeConge;
@@ -10,14 +9,11 @@ import com.example.gestion_rh.model.Employe;
 import com.example.gestion_rh.model.Utilisateur;
 import com.example.gestion_rh.repository.DemandeCongeRepository;
 import com.example.gestion_rh.repository.UtilisateurRepository;
-import com.example.gestion_rh.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -29,10 +25,6 @@ public class DemandeCongeService {
     private final EmployeService employeService;
     private final UtilisateurRepository utilisateurRepository;
     private final NotificationService notificationService;
-
-    public PageResponse<DemandeCongeResponse> findAll(Pageable pageable) {
-        return PageResponse.from(demandeCongeRepository.findAll(pageable).map(this::toResponse));
-    }
 
     public List<DemandeCongeResponse> findAll() {
         return demandeCongeRepository.findAll().stream().map(this::toResponse).toList();
@@ -48,24 +40,22 @@ public class DemandeCongeService {
                 .stream().map(this::toResponse).toList();
     }
 
-    public DemandeCongeResponse findById(Integer id, Utilisateur connecte) {
-        DemandeConge demande = getOrThrow(id);
-        SecurityUtils.assertOwnsEmployeResource(connecte, demande.getEmploye().getIdEmploye());
-        return toResponse(demande);
+    public DemandeCongeResponse findById(Integer id) {
+        return toResponse(getOrThrow(id));
     }
 
-    public DemandeCongeResponse create(DemandeCongeRequest request, Utilisateur connecte) {
+    public DemandeCongeResponse create(DemandeCongeRequest request, String loginConnecte) {
         if (request.getDateFin().isBefore(request.getDateDebut())) {
             throw new BusinessException("La date de fin doit être après ou égale à la date de début");
         }
 
-        Integer idEmploye = SecurityUtils.resolveTargetEmployeId(connecte, request.getIdEmploye());
-        Employe employe = employeService.getOrThrow(idEmploye);
-        Utilisateur utilisateur = utilisateurRepository.getReferenceById(connecte.getIdUtilisateur());
+        Employe employe = employeService.getOrThrow(request.getIdEmploye());
+        Utilisateur utilisateur = utilisateurRepository.findByLogin(loginConnecte)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
 
         // Vérification chevauchement de congés
         boolean chevauchement = demandeCongeRepository.existsChevauchement(
-                idEmploye, request.getDateDebut(), request.getDateFin());
+                request.getIdEmploye(), request.getDateDebut(), request.getDateFin());
         if (chevauchement) {
             throw new BusinessException("Il existe déjà une demande de congé sur cette période");
         }
@@ -76,23 +66,20 @@ public class DemandeCongeService {
                 .dateDebut(request.getDateDebut())
                 .dateFin(request.getDateFin())
                 .motifConge(request.getMotifConge())
-                .nbJours((int) ChronoUnit.DAYS.between(request.getDateDebut(), request.getDateFin()) + 1)
+                .nbJours(0) // calculé par le trigger BDD
                 .statutConge(DemandeConge.StatutConge.En_attente)
                 .dateDemande(LocalDateTime.now())
                 .build();
 
         DemandeConge saved = demandeCongeRepository.save(demande);
 
-        try {
-            notificationService.creerNotification(
-                    employe,
-                    null,
-                    "Votre demande de congé du " + request.getDateDebut() + " au " + request.getDateFin() + " a été soumise.",
-                    com.example.gestion_rh.model.Notification.TypeNotification.Congés
-            );
-        } catch (Exception ignored) {
-            // La demande reste valide même si la notif échoue
-        }
+        // Notification automatique
+        notificationService.creerNotification(
+                employe,
+                null,
+                "Votre demande de congé du " + request.getDateDebut() + " au " + request.getDateFin() + " a été soumise.",
+                com.example.gestion_rh.model.Notification.TypeNotification.Congés
+        );
 
         return toResponse(saved);
     }
@@ -133,9 +120,8 @@ public class DemandeCongeService {
         return toResponse(saved);
     }
 
-    public void delete(Integer id, Utilisateur connecte) {
+    public void delete(Integer id) {
         DemandeConge demande = getOrThrow(id);
-        SecurityUtils.assertOwnsEmployeResource(connecte, demande.getEmploye().getIdEmploye());
         if (demande.getStatutConge() == DemandeConge.StatutConge.Approuvée) {
             throw new BusinessException("Impossible de supprimer une demande déjà approuvée");
         }

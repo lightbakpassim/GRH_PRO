@@ -14,7 +14,7 @@ public class UtilisateurRequest {
     @Size(min = 3, max = 50, message = "Le login doit avoir entre 3 et 50 caractères")
     private String login;
 
-    /** Optionnel à la création : un mot de passe unique est généré et envoyé par email. */
+    @NotBlank(message = "Le mot de passe est obligatoire")
     @Size(min = 6, message = "Le mot de passe doit avoir au moins 6 caractères")
     private String motDePasse;
 
@@ -24,6 +24,6 @@ public class UtilisateurRequest {
     @NotNull(message = "Le rôle est obligatoire")
     private Utilisateur.Role role;
 
-    /** Obligatoire sauf pour le rôle DG. */
+    @NotNull(message = "L'id de l'employé est obligatoire")
     private Integer idEmploye;
 }

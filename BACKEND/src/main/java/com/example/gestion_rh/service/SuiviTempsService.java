@@ -2,7 +2,6 @@ package com.example.gestion_rh.service;
 
 
 import com.example.gestion_rh.dto.request.SuiviTempsRequest;
-import com.example.gestion_rh.dto.response.PageResponse;
 import com.example.gestion_rh.dto.response.SuiviTempsResponse;
 import com.example.gestion_rh.exception.BusinessException;
 import com.example.gestion_rh.exception.ResourceNotFoundException;
@@ -11,13 +10,12 @@ import com.example.gestion_rh.model.SuiviTemps;
 import com.example.gestion_rh.model.Utilisateur;
 import com.example.gestion_rh.repository.SuiviTempsRepository;
 import com.example.gestion_rh.repository.UtilisateurRepository;
-import com.example.gestion_rh.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -29,10 +27,6 @@ public class SuiviTempsService {
     private final SuiviTempsRepository suiviTempsRepository;
     private final EmployeService employeService;
     private final UtilisateurRepository utilisateurRepository;
-
-    public PageResponse<SuiviTempsResponse> findAll(Pageable pageable) {
-        return PageResponse.from(suiviTempsRepository.findAll(pageable).map(this::toResponse));
-    }
 
     public List<SuiviTempsResponse> findAll() {
         return suiviTempsRepository.findAll().stream().map(this::toResponse).toList();
@@ -53,14 +47,14 @@ public class SuiviTempsService {
                 .stream().map(this::toResponse).toList();
     }
 
-    public SuiviTempsResponse create(SuiviTempsRequest request, Utilisateur connecte) {
+    public SuiviTempsResponse create(SuiviTempsRequest request, String loginConnecte) {
         if (request.getHeuresFin().isBefore(request.getHeuresDebut())) {
             throw new BusinessException("L'heure de fin doit être après l'heure de début");
         }
 
-        Integer idEmploye = SecurityUtils.resolveTargetEmployeId(connecte, request.getIdEmploye());
-        Employe employe = employeService.getOrThrow(idEmploye);
-        Utilisateur utilisateur = utilisateurRepository.getReferenceById(connecte.getIdUtilisateur());
+        Employe employe = employeService.getOrThrow(request.getIdEmploye());
+        Utilisateur utilisateur = utilisateurRepository.findByLogin(loginConnecte)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
 
         SuiviTemps suivi = SuiviTemps.builder()
                 .employe(employe)

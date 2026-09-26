@@ -10,7 +10,7 @@ import java.time.LocalTime;
 @Data
 public class SuiviTempsRequest {
 
-    /** Optionnel pour un Employe (forcé côté serveur). */
+    @NotNull(message = "L'id de l'employé est obligatoire")
     private Integer idEmploye;
 
     @NotNull(message = "La date de travail est obligatoire")
@@ -22,5 +22,6 @@ public class SuiviTempsRequest {
     @NotNull(message = "L'heure de fin est obligatoire")
     private LocalTime heuresFin;
 
+    // Statut initial des heures supp, défaut "En attente"
     private SuiviTemps.StatutSupp statutSupp = SuiviTemps.StatutSupp.En_attente;
 }

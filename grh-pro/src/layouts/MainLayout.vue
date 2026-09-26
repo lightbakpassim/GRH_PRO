@@ -1,7 +1,7 @@
 <template>
-  <div class="flex h-screen bg-gray-100 overflow-hidden">
-    <!-- Sidebar -->
-    <EmployeSidebar :is-open="sidebarOpen" @toggle="toggleSidebar" />
+  <div class="flex h-screen bg-gray-50 overflow-hidden">
+    <!-- Sidebar Desktop -->
+    <Sidebar :is-open="sidebarOpen" @toggle="toggleSidebar" />
 
     <!-- Overlay mobile -->
     <div
@@ -12,7 +12,7 @@
 
     <!-- Contenu principal -->
     <div class="flex-1 flex flex-col overflow-hidden">
-      <!-- Header mobile -->
+      <!-- Header -->
       <header class="bg-white shadow-sm lg:hidden">
         <div class="px-4 py-3 flex items-center justify-between">
           <button
@@ -21,7 +21,7 @@
           >
             <Bars3Icon class="w-6 h-6 text-gray-600" />
           </button>
-          <h1 class="text-lg font-semibold text-blue-600">GRH Pro</h1>
+          <h1 class="text-lg font-semibold text-primary-600">GRH Pro</h1>
           <div class="w-8"></div>
         </div>
       </header>
@@ -37,7 +37,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Bars3Icon } from '@heroicons/vue/24/outline'
-import EmployeSidebar from '@/components/EmployeSiderbar.vue'
+import Sidebar from '@/components/Sidebar.vue'
 
 const sidebarOpen = ref(false)
 const isMobile = ref(window.innerWidth < 1024)

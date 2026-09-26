@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Data
 public class AbsenceRequest {
 
-    /** Optionnel pour un Employe (forcé côté serveur). */
+    @NotNull(message = "L'id de l'employé est obligatoire")
     private Integer idEmploye;
 
     @NotNull(message = "La date d'absence est obligatoire")
